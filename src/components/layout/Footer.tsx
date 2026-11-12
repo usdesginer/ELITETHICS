@@ -48,10 +48,10 @@ export function Footer() {
                   <Shield className="text-white w-7 h-7" />
                 )}
               </div>
-              <span className="text-xl font-headline font-bold">LAZORONIX</span>
+              <span className="text-xl font-headline font-bold">ELITETHICS</span>
             </Link>
-            <p className="text-muted-foreground text-[10px] leading-relaxed mb-8 uppercase tracking-wider opacity-70 font-bold">
-              Lazoronix is a Delaware-registered digital asset investigation firm. Specialized support for complex financial fraud and asset resolution.
+            <p className="text-muted-foreground text-xs leading-relaxed mb-6 font-normal">
+              Elitethics is a Delaware-registered digital asset and fraud investigation firm. We trace stolen crypto and fraudulent transactions to help victims build evidence for asset recovery.
             </p>
             
             <div className="flex items-center gap-4">
@@ -71,52 +71,54 @@ export function Footer() {
           </div>
           
           <div>
-            <h5 className="text-[10px] font-black mb-6 text-foreground uppercase tracking-[0.3em]">Services</h5>
-            <ul className="space-y-4 text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-              <li><Link href="/#services" className="hover:text-primary transition-colors">Trading Fraud Recovery</Link></li>
-              <li><Link href="/#services" className="hover:text-primary transition-colors">Investment Scam Recovery</Link></li>
-              <li><Link href="/#services" className="hover:text-primary transition-colors">Romance Scam Recovery</Link></li>
-              <li><Link href="/#services" className="hover:text-primary transition-colors">Blockchain Asset Recovery</Link></li>
-              <li><Link href="/#services" className="hover:text-primary transition-colors">Lost Funds Recovery</Link></li>
+            <h5 className="text-[11px] font-bold mb-5 text-foreground uppercase tracking-[0.2em]">Scam Recovery</h5>
+            <ul className="space-y-2.5 text-xs text-muted-foreground font-medium">
+              <li><Link href="/loan-scam-recovery" className="hover:text-primary transition-colors">Loan Scam Recovery</Link></li>
+              <li><Link href="/wallet-scam-recovery" className="hover:text-primary transition-colors">Wallet Scam Recovery</Link></li>
+              <li><Link href="/investment-scam-recovery" className="hover:text-primary transition-colors">Investment Scam Recovery</Link></li>
+              <li><Link href="/romance-scam-recovery" className="hover:text-primary transition-colors">Romance Scam Recovery</Link></li>
+              <li><Link href="/cryptocurrency-scam-recovery" className="hover:text-primary transition-colors">Cryptocurrency Scam Recovery</Link></li>
+              <li><Link href="/trading-scam-recovery" className="hover:text-primary transition-colors">Trading Scam Recovery</Link></li>
             </ul>
           </div>
           
           <div>
-            <h5 className="text-[10px] font-black mb-6 text-foreground uppercase tracking-[0.3em]">Integrity</h5>
-            <ul className="space-y-4 text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-              <li><Link href="/#preservation" className="hover:text-primary transition-colors">Protocols</Link></li>
-              <li><Link href="/#process" className="hover:text-primary transition-colors">Process</Link></li>
-              <li><Link href="/#forensic-intake" className="hover:text-primary transition-colors">Contact Specialist</Link></li>
-              <li><a href="mailto:investigator@lazoronix.com" className="hover:text-primary transition-colors">Email Our Team</a></li>
+            <h5 className="text-[11px] font-bold mb-5 text-foreground uppercase tracking-[0.2em]">Our Process</h5>
+            <ul className="space-y-3 text-xs text-muted-foreground font-medium">
+              <li><Link href="/#process" className="hover:text-primary transition-colors">How It Works</Link></li>
+              <li><Link href="/#preservation" className="hover:text-primary transition-colors">Evidence Checklist</Link></li>
+              <li><Link href="/about" className="hover:text-primary transition-colors">About Us (Our Team & Limits)</Link></li>
+              <li><Link href="/#recovery-assessment" className="hover:text-primary transition-colors">Case Assessment</Link></li>
+              <li><a href="mailto:investigator@elitethics.com" className="hover:text-primary transition-colors">Email Our Team</a></li>
             </ul>
           </div>
 
           <div>
-            <h5 className="text-[10px] font-black mb-6 text-foreground uppercase tracking-[0.3em]">Support</h5>
-            <ul className="space-y-4 text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-              <li><Link href="/#faq" className="hover:text-primary transition-colors">Knowledge Base</Link></li>
-              <li><Link href="/#success-stories" className="hover:text-primary transition-colors">Case Records</Link></li>
-              <li><Link href="/#intelligence" className="hover:text-primary transition-colors">Briefings</Link></li>
+            <h5 className="text-[11px] font-bold mb-5 text-foreground uppercase tracking-[0.2em]">Resources</h5>
+            <ul className="space-y-3 text-xs text-muted-foreground font-medium">
+              <li><Link href="/#faq" className="hover:text-primary transition-colors">FAQ</Link></li>
+              <li><Link href="/#success-stories" className="hover:text-primary transition-colors">Case Resolutions</Link></li>
+              <li><Link href="/#why-us" className="hover:text-primary transition-colors">Why Choose Us</Link></li>
             </ul>
           </div>
           
           <div>
-            <h5 className="text-[10px] font-black mb-6 text-foreground uppercase tracking-[0.3em]">Contact</h5>
-            <ul className="space-y-4 text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-              <li><a href="mailto:investigator@lazoronix.com" className="text-white block hover:text-primary transition-colors">investigator@lazoronix.com</a></li>
+            <h5 className="text-[11px] font-bold mb-5 text-foreground uppercase tracking-[0.2em]">Contact Us</h5>
+            <ul className="space-y-3 text-xs text-muted-foreground font-medium">
+              <li><a href="mailto:investigator@elitethics.com" className="text-white block hover:text-primary transition-colors">investigator@elitethics.com</a></li>
               <li><Link href="/contact" className="hover:text-primary transition-colors">Our Hubs</Link></li>
-              <li><Link href="#" className="hover:text-primary transition-colors">Legal Disclaimer</Link></li>
+              <li><Link href="#forensic-intake" className="hover:text-primary transition-colors">Case Intake</Link></li>
             </ul>
           </div>
         </div>
         
         <div className="pt-10 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
           <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">
-            © {new Date().getFullYear()} Lazoronix. Delaware Division of Corporations Registered.
+            © {new Date().getFullYear()} Elitethics. Delaware Division of Corporations Registered.
           </p>
           <div className="flex gap-6">
             <p className="text-[9px] text-muted-foreground max-w-md text-left md:text-right leading-relaxed italic uppercase tracking-[0.1em] opacity-50 font-bold">
-              Note: Lazoronix is a legally registered entity in the State of Delaware. Recovery involves complex jurisdictions and evidence review.
+              Note: Elitethics is a legally registered entity in the State of Delaware. Recovery involves complex jurisdictions and evidence review.
             </p>
           </div>
         </div>

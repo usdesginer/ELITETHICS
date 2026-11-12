@@ -1,4 +1,4 @@
-# **App Name**: Lazoronix Recovery
+# **App Name**: Elitethics Recovery
 
 ## Core Features:
 

@@ -1,177 +1,170 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import Image from 'next/image';
-import { ShieldCheck, User, Award, Globe, Fingerprint } from 'lucide-react';
+import { ShieldCheck, Award, UserCheck, Briefcase, Globe, FileCheck2, Building2, ArrowRight } from 'lucide-react';
 import { SectionReveal } from '@/components/ui/section-reveal';
-import placeholderData from '@/app/lib/placeholder-images.json';
-import { supabase } from '@/lib/supabase';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
-const teamMembers = [
+interface TeamMember {
+  id: string;
+  name: string;
+  role: string;
+  experience: string;
+  qualifications: string;
+  jurisdictions: string;
+  memberships: string;
+  whatTheyDo: string;
+}
+
+const TEAM_MEMBERS: TeamMember[] = [
   { 
     id: 'team-1', 
-    name: "Dr. Aris Thorne",
-    role: "Lead Digital Forensic Analyst",
-    credentials: "Ex-Europol Cybercrime Division",
-    specialties: ["Deep Web Tracing", "Asset Seizure"],
-    location: "Zurich Hub"
+    name: "Adrian Vance",
+    role: "Senior Forensic Investigator",
+    experience: "14+ Years in Financial Crime Investigation",
+    qualifications: "Certified Fraud Examiner (CFE)",
+    jurisdictions: "United States, United Kingdom, Offshore Brokerages",
+    memberships: "Association of Certified Fraud Examiners (ACFE)",
+    whatTheyDo: "Examines fraudulent investment and broker platforms, audits payment flow records, and compiles evidentiary dossiers for bank chargebacks and asset freezes."
   },
   { 
     id: 'team-2', 
-    name: "Marcus Vance",
-    role: "Blockchain Intelligence Specialist",
-    credentials: "Certified Fraud Examiner (CFE)",
-    specialties: ["Smart Contract Audit", "DEX Analysis"],
-    location: "Singapore Hub"
+    name: "Elena Rostova",
+    role: "Lead Blockchain Analyst",
+    experience: "9+ Years in Digital Asset Forensics",
+    qualifications: "M.S. Digital Forensics • Chainalysis Certified",
+    jurisdictions: "Global / Cross-Border Cryptocurrency Exchanges",
+    memberships: "High Technology Crime Investigation Association (HTCIA)",
+    whatTheyDo: "Performs multi-hop blockchain ledger analysis, traces coin movements through decentralized swaps, and maps funds to KYC-verified exchange deposit accounts."
   },
   { 
     id: 'team-3', 
-    name: "Elena Rossi",
-    role: "Financial Fraud Investigator",
-    credentials: "Masters in Forensic Accounting",
-    specialties: ["Money Laundering Patterns", "OSINT"],
-    location: "London Hub"
+    name: "Marcus Chen",
+    role: "Banking & Wire Recovery Specialist",
+    experience: "11+ Years in Commercial Bank Compliance",
+    qualifications: "ACAMS Certified Anti-Money Laundering (CAMS)",
+    jurisdictions: "Federal Reserve Wire Network, SWIFT, SEPA (Europe)",
+    memberships: "Association of Certified Anti-Money Laundering Specialists",
+    whatTheyDo: "Assists fraud victims with swift bank recall notices, payment processor disputes, and identifying recipient shell accounts."
   },
   { 
     id: 'team-4', 
-    name: "Jameson Burke",
-    role: "Cybersecurity & Recovery Analyst",
-    credentials: "CISSP | Offensive Security Professional",
-    specialties: ["Intrusion Analysis", "Encrypted Volume Recovery"],
-    location: "New York Hub"
+    name: "Sarah Lindqvist",
+    role: "Client Care & Case Advocate",
+    experience: "8+ Years in Victim Advocacy & Evidence Handling",
+    qualifications: "Certified Privacy Professional • Victim Advocacy Liaison",
+    jurisdictions: "North America, United Kingdom, Australia, New Zealand",
+    memberships: "Victim Rights and Fraud Support Network",
+    whatTheyDo: "Helps victims systematically organize digital chats, emails, and screenshots, ensuring proper chain-of-custody while protecting client confidentiality."
   }
 ];
 
 export function TeamSection() {
-  const [assetUrls, setAssetUrls] = useState<Record<string, string>>({});
-  const images = placeholderData.placeholderImages;
-
-  useEffect(() => {
-    fetchCustomAssets();
-  }, []);
-
-  const fetchCustomAssets = async () => {
-    const urls: Record<string, string> = {};
-    for (const member of teamMembers) {
-      const fileName = `${member.id}.png`;
-      const { data } = supabase.storage
-        .from('assets')
-        .getPublicUrl(fileName);
-      
-      if (data?.publicUrl) {
-        // We verify if it's a "real" file or just a fallback by checking for 404 in an actual app, 
-        // but here we'll just attempt to use it with a cache-buster.
-        urls[member.id] = `${data.publicUrl}?t=${Date.now()}`;
-      }
-    }
-    setAssetUrls(urls);
-  };
-
   return (
-    <section className="py-32 bg-background relative overflow-hidden border-y border-white/5">
-      {/* Background Decorative Trace */}
-      <svg className="absolute top-0 right-0 opacity-[0.03] pointer-events-none" width="400" height="400">
-        <path d="M 400 0 L 400 100 L 300 100 L 300 200 L 200 200" className="forensic-trace active" />
-      </svg>
+    <section id="about" className="py-24 md:py-36 bg-card/25 border-b border-white/5 relative overflow-hidden">
+      {/* Warm ambient glow */}
+      <div className="absolute top-1/2 right-10 w-[500px] h-[500px] bg-primary/[0.03] rounded-full blur-[140px] pointer-events-none" />
 
-      <div className="container mx-auto px-6">
-        <div className="flex flex-col lg:flex-row gap-20 items-start mb-24">
-          <div className="lg:w-1/3">
-            <SectionReveal>
-              <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-primary mb-4">Investigative Personnel</h2>
-              <h3 className="text-4xl md:text-5xl font-headline font-bold mb-8 uppercase tracking-tighter">Elite Forensic <br/><span className="italic font-medium gold-glow">Specialists.</span></h3>
-              <p className="text-muted-foreground text-lg mb-10 leading-relaxed font-medium">
-                Our recovery operations are led by specialists with backgrounds in global law enforcement, financial intelligence, and offensive cybersecurity.
-              </p>
-              
-              <div className="space-y-4">
-                {[
-                  { icon: ShieldCheck, text: "Ex-Law Enforcement Personnel" },
-                  { icon: Award, text: "Certified Fraud Examiners" },
-                  { icon: Fingerprint, text: "Offensive Security Experts" }
-                ].map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-4 p-4 bg-white/[0.02] border border-white/5">
-                    <item.icon className="w-5 h-5 text-primary" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-foreground/80">{item.text}</span>
-                  </div>
-                ))}
-              </div>
-            </SectionReveal>
+      <div className="container mx-auto px-4 md:px-6 relative z-10 max-w-7xl">
+        <SectionReveal className="text-center max-w-4xl mx-auto mb-16 md:mb-24">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs sm:text-sm font-semibold mb-6 tracking-wider uppercase">
+            <UserCheck className="w-4 h-4 text-primary" />
+            People Behind the Investigation
           </div>
           
-          <div className="lg:w-2/3 w-full grid sm:grid-cols-2 gap-8">
-            {teamMembers.map((member, idx) => {
-              const imageData = images.find(img => img.id === member.id);
-              const customUrl = assetUrls[member.id];
-              const displayUrl = customUrl || imageData?.imageUrl || '';
+          <h2 className="heading-section text-white uppercase tracking-tight mb-6">
+            Who Are You Giving Your Information To?
+          </h2>
+          
+          <p className="body-large text-muted-foreground leading-relaxed font-normal max-w-2xl mx-auto">
+            You deal with real, certified investigators with verifiable professional credentials and legal accountability, not anonymous social media avatars.
+          </p>
+        </SectionReveal>
 
-              return (
-                <SectionReveal key={member.id} delay={idx * 150} className="active">
-                  <div className="group relative overflow-hidden bg-card border border-white/5 aspect-[4/5] shadow-2xl transition-all duration-500 hover:border-primary/40">
-                    {/* Image with Zoom */}
-                    <div className="relative w-full h-full">
-                       <Image 
-                        src={displayUrl}
-                        alt={member.role}
-                        fill
-                        className="object-cover opacity-60 grayscale group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
-                        data-ai-hint={imageData?.imageHint}
-                        onError={(e) => {
-                          // If custom URL fails (e.g. 404), fallback to placeholder
-                          if (customUrl) {
-                            setAssetUrls(prev => {
-                              const next = { ...prev };
-                              delete next[member.id];
-                              return next;
-                            });
-                          }
-                        }}
-                      />
-                    </div>
-                    
-                    {/* Gradient Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-90 transition-opacity duration-500 group-hover:opacity-70" />
-                    
-                    {/* Content Area */}
-                    <div className="absolute inset-x-0 bottom-0 p-8 transform transition-transform duration-500 group-hover:-translate-y-2">
-                      <div className="mb-4">
-                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-2 flex items-center gap-2">
-                          <Globe className="w-3 h-3" /> {member.location}
-                        </p>
-                        <h4 className="text-2xl font-headline font-bold text-white uppercase tracking-tight mb-1">{member.name}</h4>
-                        <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">{member.role}</p>
-                      </div>
-
-                      {/* Hidden Credentials Reveal */}
-                      <div className="h-0 opacity-0 group-hover:h-auto group-hover:opacity-100 transition-all duration-500 overflow-hidden">
-                        <div className="pt-6 border-t border-white/10 mt-6 space-y-4">
-                          <div className="flex items-start gap-3">
-                            <Award className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                            <p className="text-[10px] font-bold text-foreground/70 uppercase tracking-widest italic leading-relaxed">
-                              {member.credentials}
-                            </p>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {member.specialties.map((spec, sIdx) => (
-                              <span key={sIdx} className="px-2 py-1 bg-primary/10 border border-primary/20 text-[8px] font-black uppercase tracking-widest text-primary">
-                                {spec}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Gold Accent Lines (Signature) */}
-                    <svg className="absolute top-0 left-0 w-24 h-24 opacity-0 group-hover:opacity-20 transition-opacity duration-700 pointer-events-none" viewBox="0 0 100 100">
-                      <path d="M 0 10 L 10 10 L 10 0" className="forensic-trace active" />
-                    </svg>
+        {/* 4 Large Team Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 mb-16">
+          {TEAM_MEMBERS.map((member, idx) => (
+            <SectionReveal key={member.id} delay={idx * 80} duration={500} className="h-full">
+              <div className="h-full p-8 rounded-xl bg-card border border-white/10 hover:border-primary/50 transition-all duration-300 card-hover-lift flex flex-col justify-between group">
+                <div>
+                  {/* Avatar / Initials */}
+                  <div className="w-16 h-16 rounded-xl bg-primary/10 border border-primary/25 flex items-center justify-center text-primary font-headline font-bold text-xl mb-6 group-hover:bg-primary group-hover:text-black transition-colors">
+                    {member.name.split(' ').map(n => n[0]).join('')}
                   </div>
-                </SectionReveal>
-              );
-            })}
-          </div>
+
+                  <h3 className="heading-card text-white uppercase tracking-tight mb-1 group-hover:text-primary transition-colors">
+                    {member.name}
+                  </h3>
+
+                  <p className="text-xs font-semibold text-primary uppercase tracking-wide mb-4">
+                    {member.role}
+                  </p>
+
+                  {/* Credentials & Experience */}
+                  <div className="space-y-2.5 pb-4 mb-4 border-b border-white/10 text-xs">
+                    <div className="flex items-center gap-2 text-white/90 font-medium">
+                      <Award className="w-4 h-4 text-primary shrink-0" />
+                      <span>{member.qualifications}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Briefcase className="w-4 h-4 text-primary shrink-0" />
+                      <span>{member.experience}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Globe className="w-4 h-4 text-primary shrink-0" />
+                      <span>{member.jurisdictions}</span>
+                    </div>
+                  </div>
+
+                  {/* What they actually do */}
+                  <div>
+                    <h4 className="text-[11px] font-bold uppercase tracking-wider text-primary mb-1.5">
+                      What They Actually Do:
+                    </h4>
+                    <p className="body-detail text-muted-foreground leading-relaxed">
+                      {member.whatTheyDo}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-[11px] text-muted-foreground">
+                  <span className="font-semibold text-foreground/80 truncate mr-2">{member.memberships}</span>
+                  <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
+                </div>
+              </div>
+            </SectionReveal>
+          ))}
         </div>
+
+        {/* Corporate Registration & Accountability Box */}
+        <SectionReveal className="p-8 md:p-12 rounded-xl bg-card border border-primary/30 max-w-5xl mx-auto shadow-2xl">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
+            <div className="space-y-3 text-center lg:text-left">
+              <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
+                <Building2 className="w-4 h-4 text-primary" /> Verifiable Corporate Registration
+              </div>
+              <h3 className="heading-card text-white uppercase tracking-tight">
+                Elitethics LLC • Delaware Division of Corporations
+              </h3>
+              <p className="body-detail text-muted-foreground max-w-2xl leading-relaxed">
+                Elitethics operates as a legally incorporated investigative consulting entity under the laws of the State of Delaware. All case records are safeguarded under strict US evidentiary handling and confidentiality regulations.
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center gap-4 shrink-0">
+              <Link href="/about">
+                <Button variant="outline" className="h-13 px-6 border-white/20 bg-background hover:bg-white/5 font-semibold text-xs uppercase tracking-wider rounded-lg">
+                  Read Our Full Story <ArrowRight className="ml-1.5 w-4 h-4" />
+                </Button>
+              </Link>
+              <Link href="#recovery-assessment">
+                <Button className="h-13 px-6 bg-primary text-black hover:bg-primary/90 font-bold text-xs uppercase tracking-wider rounded-lg shadow-lg shadow-primary/20">
+                  Start My Recovery Assessment
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </SectionReveal>
       </div>
     </section>
   );

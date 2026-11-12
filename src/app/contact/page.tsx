@@ -26,12 +26,12 @@ import {
 } from "@/components/ui/select";
 
 const DIVISIONS = [
-  "Trading Fraud Recovery",
+  "Loan Scam Recovery",
+  "Wallet Scam Recovery",
   "Investment Scam Recovery",
   "Romance Scam Recovery",
-  "Employment Scam Recovery",
-  "Lost Funds Recovery",
-  "Blockchain Asset Recovery"
+  "Cryptocurrency Scam Recovery",
+  "Trading Scam Recovery"
 ];
 
 export default function ContactPage() {
@@ -119,7 +119,7 @@ export default function ContactPage() {
             </div>
             <h1 className="text-4xl md:text-7xl font-headline font-bold mb-6 tracking-tighter uppercase leading-tight">
               Start Your <br />
-              <span className="gradient-text italic font-medium gold-glow">Recovery Case.</span>
+              <span className="gradient-text italic font-medium copper-glow">Recovery Case.</span>
             </h1>
           </SectionReveal>
         </div>
@@ -140,7 +140,7 @@ export default function ContactPage() {
                       </div>
                       <div>
                         <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">Direct Email</p>
-                        <p className="text-xl font-headline font-bold text-white group-hover:text-primary transition-colors">investigator@lazoronix.com</p>
+                        <p className="text-xl font-headline font-bold text-white group-hover:text-primary transition-colors">investigator@elitethics.com</p>
                       </div>
                     </div>
                   </Card>

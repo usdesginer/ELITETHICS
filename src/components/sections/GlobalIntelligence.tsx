@@ -23,16 +23,16 @@ export function GlobalIntelligence() {
         <div className="flex flex-col lg:flex-row gap-16 items-center">
           <div className="lg:w-1/3">
             <SectionReveal>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/5 border border-primary/20 text-primary text-[10px] font-black mb-6 tracking-[0.3em] uppercase">
-                <Globe className="w-3 h-3" />
-                Universal Coverage
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-bold mb-6 tracking-[0.25em] uppercase">
+                <Globe className="w-3.5 h-3.5 text-primary" />
+                Worldwide Investigation Network
               </div>
-              <h2 className="text-4xl md:text-5xl font-headline font-bold mb-8 uppercase tracking-tighter leading-tight">
+              <h2 className="text-3xl md:text-5xl font-headline font-bold mb-6 uppercase tracking-tighter leading-tight">
                 Global <br />
-                <span className="text-primary italic font-medium gold-glow">Forensic Reach.</span>
+                <span className="text-primary italic font-medium copper-glow">Forensic Reach.</span>
               </h2>
-              <p className="text-muted-foreground text-lg mb-10 leading-relaxed font-medium">
-                Our investigative capability is not restricted by geography. We operate across all international financial jurisdictions, maintaining active forensic monitoring across the global blockchain network and decentralized corridors.
+              <p className="text-muted-foreground text-base md:text-lg mb-8 leading-relaxed font-normal">
+                Online fraudsters operate across borders, and our investigations follow them everywhere. Whether funds were routed to overseas shell companies or converted on international crypto exchanges, we trace and document every hop.
               </p>
               
               <div className="space-y-4">
@@ -80,7 +80,7 @@ export function GlobalIntelligence() {
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full border border-primary/10 animate-breathing" style={{ animationDelay: '1s' }} />
                     
                     {/* Core Pulse */}
-                    <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_15px_rgba(212,175,55,0.8)] relative z-10" />
+                    <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_15px_rgba(212,118,68,0.8)] relative z-10" />
                   </div>
                 </div>
               ))}

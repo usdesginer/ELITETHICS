@@ -1,7 +1,7 @@
 
-# Lazoronix Forensic Database Schema
+# Elitethics Forensic Database Schema
 
-This document outlines the database structure and Row Level Security (RLS) policies required for the Lazoronix Digital Asset Recovery platform.
+This document outlines the database structure and Row Level Security (RLS) policies required for the Elitethics Digital Asset Recovery platform.
 
 ## SQL Setup (Run this in Supabase SQL Editor)
 
@@ -79,18 +79,51 @@ FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Allow authenticated all stories" ON success_stories;
 CREATE POLICY "Allow authenticated all stories" ON success_stories 
 FOR ALL TO authenticated USING (true);
+-- 10. Storage Buckets Setup & Policies
+-- Create 'assets' bucket (Public for logo, team pictures)
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('assets', 'assets', true, 10485760, ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'])
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- Create 'evidence' bucket (Private for confidential client files)
+INSERT INTO storage.buckets (id, name, public, file_size_limit)
+VALUES ('evidence', 'evidence', false, 52428800)
+ON CONFLICT (id) DO NOTHING;
+
+-- Storage Policy: Public Read for Assets
+DROP POLICY IF EXISTS "Public Assets Read" ON storage.objects;
+CREATE POLICY "Public Assets Read" ON storage.objects
+FOR SELECT USING (bucket_id = 'assets');
+
+-- Storage Policy: Allow Upload & Update to Assets
+DROP POLICY IF EXISTS "Allow Upload to Assets" ON storage.objects;
+CREATE POLICY "Allow Upload to Assets" ON storage.objects
+FOR INSERT WITH CHECK (bucket_id = 'assets');
+
+DROP POLICY IF EXISTS "Allow Update Assets" ON storage.objects;
+CREATE POLICY "Allow Update Assets" ON storage.objects
+FOR UPDATE USING (bucket_id = 'assets');
+
+-- Storage Policy: Allow Case Intake Evidence Uploads
+DROP POLICY IF EXISTS "Allow Public Evidence Upload" ON storage.objects;
+CREATE POLICY "Allow Public Evidence Upload" ON storage.objects
+FOR INSERT WITH CHECK (bucket_id = 'evidence');
+
+-- Storage Policy: Restrict Evidence Read to Authenticated Investigators
+DROP POLICY IF EXISTS "Allow Authenticated Evidence Read" ON storage.objects;
+CREATE POLICY "Allow Authenticated Evidence Read" ON storage.objects
+FOR SELECT TO authenticated USING (bucket_id = 'evidence');
 ```
 
 ## Storage Buckets
 
-### `assets` (Public)
-1. Go to **Storage** in Supabase.
-2. Create a bucket named `assets`.
-3. Set the bucket to **Public**.
-4. This stores `logo.png` and `{member-id}.png` (e.g., `team-1.png`).
+### Automatic Setup (Recommended)
+The SQL script above automatically creates both buckets and configures their Row Level Security (RLS) policies.
 
-### `evidence` (Private)
-1. Go to **Storage** in Supabase.
-2. Create a bucket named `evidence`.
-3. Keep this bucket **Private** for investigative security.
-4. This stores victim-submitted evidence (transaction hashes, chat logs, etc.).
+### Manual Setup (Supabase Dashboard)
+If configuring manually via the UI:
+1. Go to **Storage** in the Supabase Dashboard.
+2. Click **New bucket**.
+3. Name: `assets` (toggle **Public bucket** to **ON**).
+4. Click **New bucket** again.
+5. Name: `evidence` (keep **Public bucket** **OFF**).

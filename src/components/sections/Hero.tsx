@@ -22,18 +22,26 @@ export function Hero() {
         .getPublicUrl('hero-bg.png');
       
       if (data?.publicUrl) {
-        setBgUrl(`${data.publicUrl}?t=${Date.now()}`);
+        const res = await fetch(data.publicUrl, { method: 'HEAD' });
+        if (res.ok) {
+          setBgUrl(`${data.publicUrl}?t=${Date.now()}`);
+        } else {
+          setBgUrl(null);
+        }
       }
-    } catch (error) {
+    } catch {
       setBgUrl(null);
     }
   };
 
   return (
-    <section className="relative pt-32 pb-20 md:pt-40 md:pb-32 overflow-hidden hero-gradient border-b border-white/5 min-h-[80vh] flex items-center">
-      {/* Dynamic Background Image */}
+    <section className="relative pt-36 pb-24 md:pt-48 md:pb-36 overflow-hidden hero-gradient border-b border-white/10 min-h-[85vh] flex items-center">
+      {/* Restrained Ambient Glow */}
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[500px] bg-primary/[0.04] rounded-full blur-[180px] pointer-events-none" />
+
+      {/* Optional Background Asset */}
       {bgUrl && (
-        <div className="absolute inset-0 z-0 opacity-40 grayscale pointer-events-none">
+        <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
           <Image 
             src={bgUrl} 
             alt="Hero Background" 
@@ -42,74 +50,74 @@ export function Hero() {
             priority
             onError={() => setBgUrl(null)}
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-background via-background/20 to-background" />
+          <div className="absolute inset-0 bg-gradient-to-b from-background via-background/40 to-background" />
         </div>
       )}
 
-      {/* Living Intelligence Background Overlay */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden select-none z-10">
-        <svg width="100%" height="100%" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" className="opacity-20 md:opacity-40">
-          <defs>
-            <pattern id="intelligence-grid" width="60" height="60" patternUnits="userSpaceOnUse">
-              <circle cx="0" cy="0" r="0.4" fill="rgba(212, 175, 55, 0.15)" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#intelligence-grid)" />
-          <path d="M 0 150 Q 300 100 600 400 T 1200 650" className="network-line" />
-          <path d="M 1200 200 Q 900 350 600 400 T 0 600" className="network-line" style={{ animationDelay: '-10s' }} />
-        </svg>
-      </div>
-
-      <div className="container mx-auto px-4 md:px-6 relative z-20">
+      <div className="container mx-auto px-4 md:px-6 relative z-10">
         <div className="max-w-5xl mx-auto text-center">
           <SectionReveal delay={100} duration={600} threshold={0}>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-full bg-primary/5 border border-primary/20 text-primary text-[8px] md:text-[10px] font-black mb-6 md:mb-8 tracking-[0.3em] uppercase">
-              <ShieldCheck className="w-3 md:w-3.5 h-3 md:h-3.5" />
-              Institutional Forensic Intelligence
+            {/* Trust Pill */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/25 text-primary text-xs sm:text-sm font-semibold mb-8 tracking-wider">
+              <ShieldCheck className="w-4 h-4 text-primary" />
+              Delaware Registered • Digital Fraud & Scam Recovery Specialists
             </div>
             
-            <h1 className="text-4xl sm:text-5xl md:text-8xl font-headline font-bold leading-[1] md:leading-[0.95] mb-6 md:mb-8 tracking-tighter text-white uppercase text-balance">
-              Start a Confidential <br className="hidden sm:block"/>
-              <span className="gradient-text italic font-medium gold-glow">Case Review.</span>
+            {/* 64–80px Target Hero Heading (Clean, Serious, Calm) */}
+            <h1 className="heading-hero font-headline font-bold text-white mb-6 md:mb-8 uppercase tracking-tight text-balance">
+              Lost Money to a Scam? <br />
+              <span className="text-white/90 font-medium">
+                You May Still Have Options.
+              </span>
             </h1>
             
-            <p className="text-sm md:text-xl text-muted-foreground mb-8 md:mb-12 max-w-3xl mx-auto leading-relaxed font-medium px-4 md:px-0 text-balance">
-              Lazoronix provides institutional-grade forensic investigation and blockchain tracing for complex asset recovery. We investigate financial fraud, trace digital assets, and identify recovery paths.
+            {/* 17–19px Target Body */}
+            <p className="body-large text-muted-foreground mb-10 md:mb-12 max-w-3xl mx-auto leading-relaxed font-normal text-balance">
+              We help people investigate scams, trace where their money went, gather court-ready evidence, and determine what recovery steps may be available.
             </p>
             
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 md:gap-6 mb-12">
-              <Link href="#forensic-intake" className="w-full sm:w-auto">
-                <Button size="lg" className="h-14 md:h-16 px-8 md:px-12 text-sm md:text-lg bg-primary text-black hover:bg-primary/90 font-black w-full shadow-2xl shadow-primary/20 group uppercase tracking-widest rounded-none transition-all duration-300 premium-cta">
-                  Begin Case Assessment
-                  <ArrowRight className="ml-2 w-4 md:w-5 h-4 md:h-5 group-hover:translate-x-1 transition-transform" />
+            {/* Prominent Action Buttons */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 md:gap-6 mb-10">
+              <Link href="#recovery-assessment" className="w-full sm:w-auto">
+                <Button size="lg" className="h-16 px-10 text-base md:text-lg bg-primary text-black hover:bg-primary/90 font-bold w-full shadow-2xl shadow-primary/25 group uppercase tracking-wider rounded-lg transition-all duration-300">
+                  Start My Recovery Assessment
+                  <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1.5 transition-transform" />
                 </Button>
               </Link>
-              <div className="flex flex-col items-center gap-3 w-full sm:w-auto">
-                <a href="mailto:investigator@lazoronix.com" className="w-full">
-                  <Button size="lg" variant="outline" className="h-14 md:h-16 px-8 md:px-12 text-sm md:text-lg border-white/10 bg-white/5 hover:bg-white/10 w-full font-bold uppercase tracking-widest rounded-none">
-                    <Mail className="mr-2 w-4 h-4" /> Email Our Investigation Team
+              <div className="flex flex-col items-center gap-2 w-full sm:w-auto">
+                <a href="mailto:investigator@elitethics.com" className="w-full">
+                  <Button size="lg" variant="outline" className="h-16 px-8 md:px-10 text-base md:text-lg border-white/15 bg-card hover:bg-white/10 w-full font-semibold uppercase tracking-wider rounded-lg">
+                    <Mail className="mr-2.5 w-5 h-5 text-primary" /> Speak With Our Team
                   </Button>
                 </a>
-                <span className="text-[10px] font-black text-primary uppercase tracking-widest">investigator@lazoronix.com</span>
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-4 md:gap-8 opacity-60">
-               <div className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground flex items-center gap-2">
-                 <span className="w-1.5 h-1.5 rounded-full bg-primary" /> Confidential case enquiries
+            {/* Crucial Trust Anchor & Reassurance (Clean, Not Cramped) */}
+            <div className="max-w-2xl mx-auto mb-10 p-5 md:p-6 rounded-lg bg-card border border-white/10 text-center shadow-xl">
+              <p className="text-sm sm:text-base text-foreground/90 leading-relaxed font-medium">
+                <span className="text-primary font-bold">Important Reassurance:</span> No recovery is ever guaranteed. We assess your situation honestly first and explain your realistic options before any commitment.
+              </p>
+            </div>
+
+            {/* Trust Badges in Clean 14–16px Scale */}
+            <div className="flex flex-wrap items-center justify-center gap-6 md:gap-10 text-sm md:text-base font-medium text-muted-foreground">
+               <div className="flex items-center gap-2">
+                 <span className="w-2 h-2 rounded-full bg-primary" /> Delaware Registered Entity
                </div>
-               <div className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground flex items-center gap-2">
-                 <span className="w-1.5 h-1.5 rounded-full bg-primary" /> Secure submission
+               <div className="flex items-center gap-2">
+                 <span className="w-2 h-2 rounded-full bg-primary" /> 100% Confidential
                </div>
-               <div className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground flex items-center gap-2">
-                 <span className="w-1.5 h-1.5 rounded-full bg-primary" /> Human specialist review
+               <div className="flex items-center gap-2">
+                 <span className="w-2 h-2 rounded-full bg-primary" /> Free Preliminary Review
+               </div>
+               <div className="flex items-center gap-2">
+                 <span className="w-2 h-2 rounded-full bg-primary" /> Zero False Promises
                </div>
             </div>
           </SectionReveal>
         </div>
       </div>
-      
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] md:w-[1200px] h-[800px] md:h-[1200px] bg-primary/[0.03] rounded-full blur-[120px] md:blur-[180px] -z-10" />
     </section>
   );
 }

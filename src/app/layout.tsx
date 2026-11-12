@@ -5,7 +5,7 @@ import {MouseSpotlight} from '@/components/ui/mouse-spotlight';
 import Script from 'next/script';
 
 export const metadata: Metadata = {
-  title: 'Lazoronix | Institutional Forensic Intelligence & Digital Asset Investigation',
+  title: 'Elitethics | Institutional Forensic Intelligence & Digital Asset Investigation',
   description: 'Specialized forensic investigation for victims of financial trading fraud, institutional investment schemes, and digital asset access challenges. Leading with evidence-based intelligence.',
 };
 
