@@ -60,19 +60,20 @@ export default function RootLayout({
         {children}
         <Toaster />
         
-        {/* Tawk.to Stable Initialization */}
-        <Script id="tawk-init" strategy="afterInteractive">
+        {/* Tawk.to Live Chat */}
+        <Script id="tawk-to" strategy="afterInteractive">
           {`
-            window.Tawk_API = window.Tawk_API || {};
-            window.Tawk_LoadStart = new Date();
+            var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+            (function(){
+            var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+            s1.async=true;
+            s1.src='https://embed.tawk.to/6af7556711be3b433ab6459b/1k7b2b7fi';
+            s1.charset='UTF-8';
+            s1.setAttribute('crossorigin','*');
+            s0.parentNode.insertBefore(s1,s0);
+            })();
           `}
         </Script>
-        <Script 
-          id="tawk-embed"
-          src="https://embed.tawk.to/6a3186cd16fcef1d436f9c5b/1jr8nd581" 
-          strategy="afterInteractive"
-          crossOrigin="anonymous"
-        />
       </body>
     </html>
   );
