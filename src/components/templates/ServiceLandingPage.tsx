@@ -279,8 +279,10 @@ NARRATIVE: ${formData.description}
                   </Button>
                 </a>
                 <a href="mailto:investigator@elitethics.com" className="w-full sm:w-auto">
-                  <Button size="lg" variant="outline" className="w-full sm:w-auto h-16 px-8 md:px-10 text-base md:text-lg border-white/15 bg-card hover:bg-white/10 font-semibold uppercase tracking-wider rounded-lg">
-                    <Mail className="mr-2.5 w-5 h-5 text-primary" /> Speak With An Investigator
+                  <Button size="lg" variant="outline" className="w-full sm:w-auto h-16 px-8 md:px-10 text-base md:text-lg border-white/15 bg-card hover:bg-white/10 font-bold uppercase tracking-wider rounded-lg group">
+                    <Mail className="mr-2.5 w-5 h-5 text-primary group-hover:scale-110 transition-transform" /> 
+                    <span className="font-semibold text-muted-foreground mr-1.5">Desk:</span> 
+                    <strong className="font-extrabold text-white group-hover:text-primary">investigator@elitethics.com</strong>
                   </Button>
                 </a>
               </div>
@@ -836,7 +838,7 @@ NARRATIVE: ${formData.description}
 
                   <div className="text-center pt-2">
                     <p className="text-xs text-muted-foreground uppercase tracking-wider">
-                      Or email our team directly: <a href="mailto:investigator@elitethics.com" className="text-primary hover:underline font-bold">investigator@elitethics.com</a>
+                      Or email our team directly: <a href="mailto:investigator@elitethics.com" className="text-primary hover:underline"><strong className="font-extrabold text-primary">investigator@elitethics.com</strong></a>
                     </p>
                   </div>
                 </form>

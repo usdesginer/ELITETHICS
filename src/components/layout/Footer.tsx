@@ -89,7 +89,7 @@ export function Footer() {
               <li><Link href="/#preservation" className="hover:text-primary transition-colors">Evidence Checklist</Link></li>
               <li><Link href="/about" className="hover:text-primary transition-colors">About Us (Our Team & Limits)</Link></li>
               <li><Link href="/#recovery-assessment" className="hover:text-primary transition-colors">Case Assessment</Link></li>
-              <li><a href="mailto:investigator@elitethics.com" className="hover:text-primary transition-colors">Email Our Team</a></li>
+              <li><a href="mailto:investigator@elitethics.com" className="hover:text-primary transition-colors">Desk: <strong className="font-extrabold text-white hover:text-primary">investigator@elitethics.com</strong></a></li>
             </ul>
           </div>
 
@@ -105,7 +105,7 @@ export function Footer() {
           <div>
             <h5 className="text-[11px] font-bold mb-5 text-foreground uppercase tracking-[0.2em]">Contact Us</h5>
             <ul className="space-y-3 text-xs text-muted-foreground font-medium">
-              <li><a href="mailto:investigator@elitethics.com" className="text-white block hover:text-primary transition-colors">investigator@elitethics.com</a></li>
+              <li><a href="mailto:investigator@elitethics.com" className="text-white block hover:text-primary transition-colors text-sm"><strong className="font-extrabold text-primary hover:text-white">investigator@elitethics.com</strong></a></li>
               <li><Link href="/contact" className="hover:text-primary transition-colors">Our Hubs</Link></li>
               <li><Link href="#forensic-intake" className="hover:text-primary transition-colors">Case Intake</Link></li>
             </ul>

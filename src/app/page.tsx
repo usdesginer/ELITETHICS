@@ -159,8 +159,10 @@ export default function Home() {
                       <Mail className="mr-2 w-5 h-5 text-primary" /> Email An Investigator
                     </Button>
                   </a>
-                  <p className="text-xs text-center font-bold text-primary uppercase tracking-wider">
-                    investigator@elitethics.com
+                  <p className="text-sm text-center tracking-wider">
+                    <a href="mailto:investigator@elitethics.com" className="hover:underline">
+                      <strong className="font-black text-primary text-sm sm:text-base tracking-wide">investigator@elitethics.com</strong>
+                    </a>
                   </p>
                 </div>
               </div>

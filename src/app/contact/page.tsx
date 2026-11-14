@@ -139,8 +139,10 @@ export default function ContactPage() {
                         <Mail className="w-5 h-5 text-primary" />
                       </div>
                       <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">Direct Email</p>
-                        <p className="text-xl font-headline font-bold text-white group-hover:text-primary transition-colors">investigator@elitethics.com</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">Direct Investigation Email</p>
+                        <a href="mailto:investigator@elitethics.com" className="text-xl md:text-2xl font-headline font-black text-white group-hover:text-primary transition-colors tracking-wide block">
+                          <strong className="font-extrabold text-primary group-hover:text-white">investigator@elitethics.com</strong>
+                        </a>
                       </div>
                     </div>
                   </Card>

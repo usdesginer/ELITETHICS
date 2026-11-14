@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Shield, ChevronDown, Menu, X } from 'lucide-react';
+import { Shield, ChevronDown, Menu, X, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -114,8 +114,12 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-3 md:gap-4">
-          <a href="mailto:investigator@elitethics.com" className="hidden xl:inline-block text-xs font-semibold text-muted-foreground hover:text-primary transition-colors">
-            Speak With Our Team
+          <a href="mailto:investigator@elitethics.com" className="hidden xl:inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors group">
+            <Mail className="w-3.5 h-3.5 text-primary group-hover:scale-110 transition-transform" />
+            <span className="font-medium text-muted-foreground">Email:</span>
+            <strong className="font-extrabold text-white group-hover:text-primary tracking-wide">
+              investigator@elitethics.com
+            </strong>
           </a>
 
           <Button asChild className="hidden sm:flex bg-primary hover:bg-primary/90 text-black font-bold h-10 md:h-11 px-5 rounded-lg text-xs md:text-sm shadow-lg shadow-primary/20">
@@ -174,8 +178,11 @@ export function Navbar() {
                       Start My Recovery Assessment
                     </Button>
                   </Link>
-                  <a href="mailto:investigator@elitethics.com" className="block text-center text-xs text-primary font-medium py-2">
-                    investigator@elitethics.com
+                  <a href="mailto:investigator@elitethics.com" className="block text-center text-xs py-2 tracking-wide">
+                    <span className="text-muted-foreground block text-[10px] uppercase font-mono mb-0.5">Official Desk Email</span>
+                    <strong className="font-extrabold text-primary text-sm hover:underline">
+                      investigator@elitethics.com
+                    </strong>
                   </a>
                 </div>
               </div>

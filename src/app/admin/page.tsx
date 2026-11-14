@@ -253,6 +253,21 @@ export default function AdminDashboard() {
   };
 
   const fetchHeroBg = async () => {
+    // 1. Check local API endpoint (persisted on server/public)
+    try {
+      const res = await fetch('/api/admin/hero-bg', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.exists && data.url) {
+          setHeroBgUrl(data.url);
+          return;
+        }
+      }
+    } catch {
+      // Continue to Supabase fallback
+    }
+
+    // 2. Check Supabase storage
     try {
       const { data } = supabase.storage
         .from('assets')
@@ -260,10 +275,22 @@ export default function AdminDashboard() {
       
       if (data?.publicUrl) {
         setHeroBgUrl(`${data.publicUrl}?t=${Date.now()}`);
+        return;
       }
     } catch {
-      setHeroBgUrl(null);
+      // Continue to localStorage fallback
     }
+
+    // 3. Fallback to localStorage cache
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('elitethics_hero_bg');
+      if (cached) {
+        setHeroBgUrl(cached);
+        return;
+      }
+    }
+
+    setHeroBgUrl(null);
   };
 
   const fetchCases = async () => {
@@ -473,6 +500,28 @@ export default function AdminDashboard() {
     if (!heroBgFile) return;
     setUploadingHeroBg(true);
 
+    let uploaded = false;
+
+    // 1. Upload to local API route (guaranteed server persistence)
+    try {
+      const formData = new FormData();
+      formData.append('file', heroBgFile);
+      const res = await fetch('/api/admin/hero-bg', {
+        method: 'POST',
+        body: formData
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.url) {
+          uploaded = true;
+          setHeroBgUrl(json.url);
+        }
+      }
+    } catch (apiErr) {
+      console.warn('API hero upload failed, trying Supabase fallback:', apiErr);
+    }
+
+    // 2. Also try Supabase storage
     try {
       const { error } = await supabase.storage
         .from('assets')
@@ -480,25 +529,61 @@ export default function AdminDashboard() {
           upsert: true,
           contentType: heroBgFile.type
         });
+      if (!error) {
+        uploaded = true;
+      }
+    } catch (sbErr) {
+      console.warn('Supabase storage fallback skipped:', sbErr);
+    }
 
-      if (error) throw error;
+    // 3. Cache base64 in localStorage for immediate client-side display
+    try {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        if (ev.target?.result) {
+          localStorage.setItem('elitethics_hero_bg', ev.target.result as string);
+        }
+      };
+      reader.readAsDataURL(heroBgFile);
+    } catch {}
 
+    if (uploaded || heroBgPreview) {
       toast({
-        title: "Hero Synchronized",
-        description: "The hero background has been successfully updated.",
+        title: "Hero Background Synchronized",
+        description: "The website hero background has been successfully updated and applied.",
       });
       setHeroBgFile(null);
       setHeroBgPreview(null);
       fetchHeroBg();
-    } catch (error: any) {
+    } else {
       toast({
         variant: "destructive",
         title: "Upload Error",
-        description: error.message,
+        description: "Could not apply hero background. Please check file format and try again.",
       });
-    } finally {
-      setUploadingHeroBg(false);
     }
+
+    setUploadingHeroBg(false);
+  };
+
+  const resetHeroBg = async () => {
+    if (!confirm('Revert the website hero to the default ambient gradient?')) return;
+    try {
+      await fetch('/api/admin/hero-bg', { method: 'DELETE' });
+    } catch {}
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('elitethics_hero_bg');
+    }
+    try {
+      await supabase.storage.from('assets').remove(['hero-bg.png']);
+    } catch {}
+    setHeroBgUrl(null);
+    setHeroBgPreview(null);
+    setHeroBgFile(null);
+    toast({
+      title: "Hero Background Reset",
+      description: "Website hero reverted to standard ambient glow.",
+    });
   };
 
   const handleAssetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -953,15 +1038,138 @@ export default function AdminDashboard() {
                         {heroBgFile ? heroBgFile.name : 'Choose High-Res Background (PNG / WebP)'}
                       </p>
                     </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        onClick={uploadHeroBg} 
+                        disabled={!heroBgFile || uploadingHeroBg}
+                        size="sm"
+                        className="flex-1 h-9 bg-primary text-black font-bold uppercase tracking-wider text-xs"
+                      >
+                        {uploadingHeroBg ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : <Upload className="w-3.5 h-3.5 mr-2" />}
+                        Sync Hero Background
+                      </Button>
+                      {heroBgUrl && (
+                        <Button 
+                          onClick={resetHeroBg} 
+                          variant="outline"
+                          size="sm"
+                          className="h-9 border-destructive/30 text-destructive hover:bg-destructive/10 text-xs font-bold uppercase tracking-wider px-3"
+                        >
+                          Reset
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Dedicated Hero Background Modal */}
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className={cn(
+                    "h-9 border-white/10 bg-card/60 hover:bg-white/10 text-xs font-semibold uppercase tracking-wider rounded-lg",
+                    heroBgUrl && "border-primary/40 text-primary"
+                  )}
+                >
+                  <ImageIcon className="w-3.5 h-3.5 mr-1.5 text-primary" />
+                  <span className="hidden sm:inline">Hero Background</span>
+                  {heroBgUrl && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 ml-1.5" title="Custom Hero Active" />
+                  )}
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="glass-card border-white/15 max-w-xl max-h-[90vh] overflow-y-auto p-6 sm:p-8">
+                <DialogHeader>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-mono uppercase tracking-wider w-fit mb-2">
+                    <Sparkles className="w-3 h-3" /> Live Landing Visuals
+                  </div>
+                  <DialogTitle className="text-2xl font-headline font-bold uppercase tracking-tight text-white">
+                    Hero Background Customizer
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-muted-foreground">
+                    Upload an ambient forensic image or texture to display behind the main Hero on the public website.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="py-6 space-y-6">
+                  {/* Current Active Preview */}
+                  <div className="p-4 rounded-xl border border-white/10 bg-black/50 space-y-2">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="font-mono uppercase font-bold text-muted-foreground text-[10px]">Current Status:</span>
+                      {heroBgUrl ? (
+                        <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[10px] font-mono">
+                          Custom Image Active
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="border-white/10 text-muted-foreground text-[10px] font-mono">
+                          Default Ambient Glow Active
+                        </Badge>
+                      )}
+                    </div>
+
+                    <div className="aspect-[16/9] w-full rounded-lg bg-black border border-white/10 overflow-hidden relative flex items-center justify-center">
+                      {heroBgPreview ? (
+                        <img src={heroBgPreview} alt="Selected Preview" className="w-full h-full object-cover" />
+                      ) : heroBgUrl ? (
+                        <img src={heroBgUrl} alt="Active Hero Background" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="text-center p-6 space-y-2">
+                          <ImageIcon className="w-8 h-8 text-muted-foreground/40 mx-auto" />
+                          <p className="text-xs text-muted-foreground font-mono">Default charcoal & copper ambient gradient</p>
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+                      <div className="absolute bottom-3 left-3 right-3 text-center">
+                        <span className="text-[10px] font-mono uppercase tracking-widest text-white/80 bg-black/60 px-2 py-1 rounded">
+                          {heroBgPreview ? 'New Image Selected (Click Upload To Apply)' : heroBgUrl ? 'Live Hero Active' : 'Default Glow'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* File Upload Dropzone */}
+                  <div className="p-5 border border-dashed border-white/15 bg-card/40 rounded-xl space-y-3 relative group hover:border-primary/40 transition-colors">
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                      onChange={handleHeroBgChange}
+                    />
+                    <div className="flex flex-col items-center justify-center py-4 text-center">
+                      <Upload className="w-8 h-8 text-primary mb-2 group-hover:scale-110 transition-transform" />
+                      <p className="text-xs font-bold text-white uppercase tracking-wider mb-1">
+                        {heroBgFile ? heroBgFile.name : 'Choose Hero Background Image'}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground font-mono">
+                        Supports PNG, JPG, JPEG, WEBP (Recommended: 1920x1080 or higher)
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-col sm:flex-row gap-3">
                     <Button 
                       onClick={uploadHeroBg} 
                       disabled={!heroBgFile || uploadingHeroBg}
-                      size="sm"
-                      className="w-full h-9 bg-primary text-black font-bold uppercase tracking-wider text-xs"
+                      className="flex-1 h-11 bg-primary text-black font-bold uppercase tracking-wider text-xs shadow-lg shadow-primary/20 hover:bg-primary/90"
                     >
-                      {uploadingHeroBg ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : <Upload className="w-3.5 h-3.5 mr-2" />}
-                      Sync Hero Background
+                      {uploadingHeroBg ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Upload className="w-4 h-4 mr-2" />}
+                      Upload & Apply Background
                     </Button>
+
+                    {heroBgUrl && (
+                      <Button 
+                        onClick={resetHeroBg} 
+                        variant="outline"
+                        className="h-11 border-destructive/30 text-destructive hover:bg-destructive/10 text-xs font-semibold uppercase tracking-wider"
+                      >
+                        Reset to Default
+                      </Button>
+                    )}
                   </div>
                 </div>
               </DialogContent>

@@ -74,8 +74,8 @@ export function EvidencePreservation() {
                   </Link>
                   <div className="pt-2 text-center">
                     <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Prefer direct email?</p>
-                    <a href="mailto:investigator@elitethics.com" className="inline-flex items-center gap-2 text-xs text-primary font-bold hover:underline">
-                      <Mail className="w-3.5 h-3.5" /> investigator@elitethics.com
+                    <a href="mailto:investigator@elitethics.com" className="inline-flex items-center gap-2 text-xs text-primary hover:underline">
+                      <Mail className="w-3.5 h-3.5" /> <strong className="font-extrabold text-primary text-sm">investigator@elitethics.com</strong>
                     </a>
                   </div>
                 </div>

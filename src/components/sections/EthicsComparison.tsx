@@ -41,7 +41,11 @@ const ELITETHICS_STANDARDS = [
   },
   {
     title: 'Verified Official Communication',
-    desc: 'Direct communication with dedicated forensic specialists via official corporate channels (investigator@elitethics.com) and secure forms.'
+    desc: (
+      <>
+        Direct communication with dedicated forensic specialists via official corporate channels (<strong className="font-extrabold text-white">investigator@elitethics.com</strong>) and secure forms.
+      </>
+    )
   },
   {
     title: 'Delaware Division of Corporations Registered',

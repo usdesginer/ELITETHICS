@@ -95,8 +95,8 @@ export default function AboutPage() {
                 </Button>
               </Link>
               <a href="mailto:investigator@elitethics.com">
-                <Button size="lg" variant="outline" className="h-14 px-8 border-white/15 bg-card hover:bg-white/10 font-semibold uppercase tracking-wider rounded-lg">
-                  <Mail className="mr-2 w-4 h-4 text-primary" /> Email Our Desk
+                <Button size="lg" variant="outline" className="h-14 px-8 border-white/15 bg-card hover:bg-white/10 font-bold uppercase tracking-wider rounded-lg">
+                  <Mail className="mr-2 w-4 h-4 text-primary" /> <span className="font-semibold text-muted-foreground mr-1.5">Desk:</span> <strong className="font-extrabold text-white">investigator@elitethics.com</strong>
                 </Button>
               </a>
             </div>

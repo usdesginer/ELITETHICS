@@ -67,8 +67,8 @@ export function SignsSection() {
 
                   <div className="pt-6 border-t border-white/5 max-w-2xl mx-auto space-y-3">
                     <p className="text-xs text-muted-foreground font-medium">Prefer to send an email first?</p>
-                    <a href="mailto:investigator@elitethics.com" className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary hover:copper-glow transition-all">
-                      <Mail className="w-4 h-4" /> investigator@elitethics.com
+                    <a href="mailto:investigator@elitethics.com" className="inline-flex items-center gap-2 text-sm uppercase tracking-widest text-primary hover:copper-glow transition-all">
+                      <Mail className="w-4 h-4" /> <strong className="font-extrabold text-primary hover:underline">investigator@elitethics.com</strong>
                     </a>
                   </div>
 

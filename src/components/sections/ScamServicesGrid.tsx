@@ -364,7 +364,7 @@ export function ScamServicesGrid() {
                             </Link>
                             <a href="mailto:investigator@elitethics.com" className="w-full sm:w-auto">
                               <Button variant="outline" className="w-full h-12 border-white/15 bg-white/5 font-bold uppercase tracking-wider rounded-none">
-                                <Mail className="mr-2 w-4 h-4 text-primary" /> Email Investigator
+                                <Mail className="mr-2 w-4 h-4 text-primary" /> Email: <strong className="font-extrabold ml-1 text-white">investigator@elitethics.com</strong>
                               </Button>
                             </a>
                           </div>
