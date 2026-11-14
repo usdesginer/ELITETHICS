@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { 
@@ -36,7 +36,25 @@ import {
   Briefcase,
   Download,
   Database,
-  Lock
+  Lock,
+  RefreshCw,
+  SlidersHorizontal,
+  X,
+  ExternalLink,
+  Copy,
+  FileSpreadsheet,
+  AlertTriangle,
+  Check,
+  Sparkles,
+  Phone,
+  Mail,
+  MapPin,
+  Eye,
+  ArrowUpDown,
+  Coins,
+  CreditCard,
+  Heart,
+  CandlestickChart
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -53,6 +71,8 @@ import {
   DropdownMenu, 
   DropdownMenuContent, 
   DropdownMenuItem, 
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { 
@@ -63,6 +83,11 @@ import {
   DialogDescription,
   DialogTrigger 
 } from '@/components/ui/dialog';
+import { 
+  Popover, 
+  PopoverContent, 
+  PopoverTrigger 
+} from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -104,6 +129,15 @@ type SuccessStory = {
   icon_name: string;
 };
 
+const STATUS_OPTIONS = [
+  'Review Pending',
+  'Investigating',
+  'Evidence Verified',
+  'Escalated to Authorities',
+  'Resolved',
+  'Closed / Unviable'
+];
+
 /**
  * InstitutionalDecryptor - Clinical state wrapper for sensitive case file expansion.
  */
@@ -111,36 +145,49 @@ function InstitutionalDecryptor({ children, caseId, label = "Case File" }: { chi
   const [state, setState] = useState<'decrypting' | 'open'>('decrypting');
 
   useEffect(() => {
-    const timer = setTimeout(() => setState('open'), 450);
+    const timer = setTimeout(() => setState('open'), 350);
     return () => clearTimeout(timer);
   }, []);
 
   if (state === 'decrypting') {
     return (
-      <div className="h-[400px] flex flex-col items-center justify-center space-y-6">
+      <div className="h-[420px] flex flex-col items-center justify-center space-y-6 bg-card/60 backdrop-blur-xl">
         <div className="flex items-center gap-3">
-           <div className="w-2 h-2 bg-primary animate-breathing" />
-           <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">{label} {caseId && `: ${caseId}`}</span>
+          <div className="w-2.5 h-2.5 rounded-full bg-primary animate-ping" />
+          <span className="text-[11px] font-mono uppercase tracking-[0.3em] text-primary">
+            {label} {caseId && `: ${caseId}`}
+          </span>
         </div>
-        <div className="text-2xl font-headline font-bold uppercase tracking-tighter animate-pulse text-white">
-           Decrypting Access Keys...
+        <div className="text-xl md:text-2xl font-headline font-bold uppercase tracking-tight text-white flex items-center gap-3">
+          <Lock className="w-5 h-5 text-primary animate-pulse" />
+          Decrypting Forensic Dossier...
         </div>
-        <div className="w-64 h-[1px] bg-white/5 relative overflow-hidden">
-           <div className="absolute top-0 h-full w-24 bg-primary animate-stream-pulse" />
+        <div className="w-72 h-[2px] bg-white/10 relative overflow-hidden rounded-full">
+          <div className="absolute top-0 h-full w-28 bg-gradient-to-r from-transparent via-primary to-transparent animate-stream-pulse" />
         </div>
-        <p className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground">Authorized Access Only</p>
+        <p className="text-[10px] font-mono uppercase tracking-[0.25em] text-muted-foreground">
+          Delaware Department Record • Authorized Access Only
+        </p>
       </div>
     );
   }
 
-  return <div className="animate-in fade-in duration-500">{children}</div>;
+  return <div className="animate-in fade-in duration-300">{children}</div>;
 }
 
 export default function AdminDashboard() {
   const [cases, setCases] = useState<CaseRecord[]>([]);
   const [stories, setStories] = useState<SuccessStory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCase, setSelectedCase] = useState<CaseRecord | null>(null);
   
+  // Search & Filtering State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [riskFilter, setRiskFilter] = useState<string>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
+
   // Logo State
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -200,7 +247,7 @@ export default function AdminDashboard() {
       if (data?.publicUrl) {
         setLogoUrl(`${data.publicUrl}?t=${Date.now()}`);
       }
-    } catch (error) {
+    } catch {
       setLogoUrl(null);
     }
   };
@@ -214,7 +261,7 @@ export default function AdminDashboard() {
       if (data?.publicUrl) {
         setHeroBgUrl(`${data.publicUrl}?t=${Date.now()}`);
       }
-    } catch (error) {
+    } catch {
       setHeroBgUrl(null);
     }
   };
@@ -228,6 +275,11 @@ export default function AdminDashboard() {
 
     if (error) {
       console.error('Error fetching cases:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Sync Error',
+        description: 'Unable to reach case database.'
+      });
     } else {
       setCases(data || []);
     }
@@ -247,17 +299,83 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/admin/login');
+  const updateCaseStatus = async (id: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('cases')
+        .update({ status: newStatus })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setCases(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
+      if (selectedCase && selectedCase.id === id) {
+        setSelectedCase(prev => prev ? { ...prev, status: newStatus } : null);
+      }
+
+      toast({
+        title: 'Status Updated',
+        description: `Case marked as '${newStatus}'.`
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Update Failed',
+        description: error.message || 'Could not update status.'
+      });
+    }
   };
 
   const deleteCase = async (id: string) => {
-    if (confirm('Permanently delete this forensic record?')) {
+    if (confirm('Permanently delete this forensic record from the ledger? This action cannot be undone.')) {
       const { error } = await supabase.from('cases').delete().eq('id', id);
       if (!error) {
         setCases(cases.filter(c => c.id !== id));
+        if (selectedCase?.id === id) setSelectedCase(null);
+        toast({ title: "Record Removed", description: "Forensic record purged." });
+      } else {
+        toast({ variant: 'destructive', title: "Delete Failed", description: error.message });
       }
+    }
+  };
+
+  const insertSampleCase = async () => {
+    try {
+      const sampleId = `ET-${Math.floor(10000 + Math.random() * 90000)}`;
+      const sampleData = {
+        case_id: sampleId,
+        case_type: 'Cryptocurrency Scam',
+        user_name: 'Arthur Sterling',
+        user_email: 'a.sterling@forensicclient.org',
+        user_phone: '+1 (302) 555-0194',
+        user_country: 'United States',
+        risk_level: 'Critical',
+        evidence_integrity: 'Substantial',
+        status: 'Review Pending',
+        description: 'Transferred 2.4 BTC to an unverified decentralized staking smart contract claiming guaranteed yield. Transaction hash generated on-chain but funds redirected to multiple tumbling hops.',
+        form_values: {
+          platformName: 'StakingVault-X',
+          lossAmount: '$148,000 USD equivalent',
+          timeElapsed: 'Within last 48 hours',
+          transactionHash: '0x7b23f81e9d1a55c2f8101a1829e34c9103bc2143'
+        },
+        evidence_files: [
+          { name: 'blockchain_tx_receipt.pdf', path: 'evidence/tx.pdf', url: 'https://picsum.photos/seed/doc1/800/600' }
+        ],
+        best_contact_time: 'Morning EST',
+        preferred_method: 'Email & WhatsApp'
+      };
+
+      const { data, error } = await supabase.from('cases').insert([sampleData]).select();
+      if (error) throw error;
+
+      toast({
+        title: "Test Intake Injected",
+        description: `Sample case #${sampleId} created for review.`
+      });
+      fetchCases();
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: "Creation Failed", description: err.message });
     }
   };
 
@@ -272,7 +390,10 @@ export default function AdminDashboard() {
   };
 
   const saveStory = async () => {
-    if (!storyForm.case_id || !storyForm.challenge) return;
+    if (!storyForm.case_id || !storyForm.challenge) {
+      toast({ variant: 'destructive', title: "Missing Information", description: "Case ID and Challenge are required." });
+      return;
+    }
 
     try {
       const { error } = await supabase
@@ -281,7 +402,7 @@ export default function AdminDashboard() {
 
       if (error) throw error;
 
-      toast({ title: "Resolution Registered", description: "The clinical case insight is now live." });
+      toast({ title: "Resolution Registered", description: "The case insight is now live on the site." });
       setIsStoryDialogOpen(false);
       setStoryForm({
         case_id: '',
@@ -421,298 +542,507 @@ export default function AdminDashboard() {
     }
   };
 
-  return (
-    <main className="min-h-screen bg-background text-foreground selection:bg-primary/30">
-      <nav className="h-20 border-b border-white/5 bg-card/50 backdrop-blur-md flex items-center justify-between px-4 md:px-8 sticky top-0 z-50">
-        <div className="flex items-center gap-3 md:gap-4">
-          <div className={cn(
-            "w-10 h-10 md:w-12 md:h-12 rounded flex items-center justify-center transition-all overflow-hidden",
-            logoUrl ? "bg-transparent p-0.5" : "bg-primary shadow-lg"
-          )}>
-            {logoUrl ? (
-              <img 
-                src={logoUrl} 
-                alt="Logo" 
-                className="w-full h-full object-contain"
-                onError={() => setLogoUrl(null)}
-              />
-            ) : (
-              <Shield className="text-white w-6 h-6 md:w-7 md:h-7" />
-            )}
-          </div>
-          <div className="hidden sm:block">
-            <h1 className="text-lg md:text-xl font-headline font-bold tracking-tight uppercase">Command Center</h1>
-            <p className="text-[8px] md:text-[9px] font-black uppercase tracking-[0.2em] text-primary">Forensic Management Engine</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 md:gap-4">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="lg:hidden h-9 w-9 p-0 border-white/5">
-                <Settings className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-card border-white/10 w-48">
-               <DropdownMenuItem onClick={() => setIsStoryDialogOpen(true)} className="uppercase text-[10px] font-black tracking-widest">
-                  <Star className="w-3.5 h-3.5 mr-2" /> Resolutions
-               </DropdownMenuItem>
-               <DropdownMenuItem className="uppercase text-[10px] font-black tracking-widest">
-                  <Settings className="w-3.5 h-3.5 mr-2" /> Branding
-               </DropdownMenuItem>
-               <DropdownMenuItem className="uppercase text-[10px] font-black tracking-widest">
-                  <Layers className="w-3.5 h-3.5 mr-2" /> Media Library
-               </DropdownMenuItem>
-               <DropdownMenuItem onClick={handleLogout} className="text-destructive uppercase text-[10px] font-black tracking-widest">
-                  <LogOut className="w-3.5 h-3.5 mr-2" /> Logout
-               </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/admin/login');
+  };
 
-          <div className="hidden lg:flex items-center gap-4">
+  // Export Table as CSV
+  const exportCasesCSV = () => {
+    if (cases.length === 0) {
+      toast({ title: "No Data", description: "No case records to export." });
+      return;
+    }
+
+    const headers = ["Case ID", "Date", "Name", "Email", "Phone", "Country", "Category", "Risk Level", "Status", "Description"];
+    const rows = filteredCases.map(c => [
+      c.case_id,
+      new Date(c.created_at).toISOString(),
+      `"${c.user_name || ''}"`,
+      `"${c.user_email || ''}"`,
+      `"${c.user_phone || ''}"`,
+      `"${c.user_country || ''}"`,
+      `"${c.case_type || ''}"`,
+      c.risk_level || '',
+      c.status || '',
+      `"${(c.description || '').replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `elitethics_cases_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ title: "Dossiers Exported", description: `Exported ${filteredCases.length} records.` });
+  };
+
+  // Filtered & Sorted Cases
+  const filteredCases = useMemo(() => {
+    return cases.filter(c => {
+      // Search
+      const search = searchQuery.toLowerCase().trim();
+      const matchesSearch = !search || 
+        c.case_id?.toLowerCase().includes(search) ||
+        c.user_name?.toLowerCase().includes(search) ||
+        c.user_email?.toLowerCase().includes(search) ||
+        c.user_phone?.toLowerCase().includes(search) ||
+        c.user_country?.toLowerCase().includes(search) ||
+        c.case_type?.toLowerCase().includes(search) ||
+        c.description?.toLowerCase().includes(search);
+
+      // Status
+      const matchesStatus = statusFilter === 'all' || c.status?.toLowerCase() === statusFilter.toLowerCase();
+
+      // Risk
+      const matchesRisk = riskFilter === 'all' || c.risk_level?.toLowerCase() === riskFilter.toLowerCase();
+
+      // Category
+      const matchesCategory = categoryFilter === 'all' || c.case_type?.toLowerCase().includes(categoryFilter.toLowerCase());
+
+      return matchesSearch && matchesStatus && matchesRisk && matchesCategory;
+    }).sort((a, b) => {
+      const timeA = new Date(a.created_at).getTime();
+      const timeB = new Date(b.created_at).getTime();
+      return sortOrder === 'newest' ? timeB - timeA : timeA - timeB;
+    });
+  }, [cases, searchQuery, statusFilter, riskFilter, categoryFilter, sortOrder]);
+
+  const activeFiltersCount = (statusFilter !== 'all' ? 1 : 0) + (riskFilter !== 'all' ? 1 : 0) + (categoryFilter !== 'all' ? 1 : 0) + (searchQuery ? 1 : 0);
+
+  const resetFilters = () => {
+    setSearchQuery('');
+    setStatusFilter('all');
+    setRiskFilter('all');
+    setCategoryFilter('all');
+    setSortOrder('newest');
+  };
+
+  // Helper icons for categories
+  const getCategoryBadge = (category: string) => {
+    const cat = (category || '').toLowerCase();
+    if (cat.includes('crypto') || cat.includes('coin') || cat.includes('btc')) {
+      return { icon: Coins, label: 'Crypto Forensic', color: 'border-amber-500/30 text-amber-400 bg-amber-500/10' };
+    }
+    if (cat.includes('invest') || cat.includes('trading') || cat.includes('broker')) {
+      return { icon: CandlestickChart, label: 'Investment Fraud', color: 'border-blue-500/30 text-blue-400 bg-blue-500/10' };
+    }
+    if (cat.includes('loan') || cat.includes('credit')) {
+      return { icon: CreditCard, label: 'Advance Fee / Loan', color: 'border-purple-500/30 text-purple-400 bg-purple-500/10' };
+    }
+    if (cat.includes('romance') || cat.includes('heart')) {
+      return { icon: Heart, label: 'Romance Scam', color: 'border-rose-500/30 text-rose-400 bg-rose-500/10' };
+    }
+    if (cat.includes('wallet')) {
+      return { icon: Wallet, label: 'Wallet Compromise', color: 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10' };
+    }
+    return { icon: Target, label: category || 'General Intake', color: 'border-white/10 text-white/80 bg-white/5' };
+  };
+
+  return (
+    <main className="min-h-screen bg-[#0A0D12] text-foreground selection:bg-primary/30 relative font-body pb-20">
+      
+      {/* Tactical Ambient Glows */}
+      <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
+        <div className="absolute top-0 right-1/4 w-[700px] h-[450px] bg-primary/[0.035] rounded-full blur-[160px]" />
+        <div className="absolute top-1/3 left-0 w-[500px] h-[500px] bg-secondary/[0.02] rounded-full blur-[140px]" />
+      </div>
+
+      {/* TOP COMMAND NAVIGATION */}
+      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0F1319]/90 backdrop-blur-xl">
+        <div className="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
+          
+          {/* Logo & Platform ID */}
+          <div className="flex items-center gap-3.5">
+            <div className={cn(
+              "w-11 h-11 rounded-lg flex items-center justify-center transition-all overflow-hidden border border-white/10 shadow-lg",
+              logoUrl ? "bg-black/60 p-1" : "bg-gradient-to-br from-primary to-primary/80"
+            )}>
+              {logoUrl ? (
+                <img 
+                  src={logoUrl} 
+                  alt="Elitethics Logo" 
+                  className="w-full h-full object-contain"
+                  onError={() => setLogoUrl(null)}
+                />
+              ) : (
+                <Shield className="text-black w-6 h-6" />
+              )}
+            </div>
+            
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-base sm:text-lg font-headline font-bold tracking-tight uppercase text-white">
+                  Command Center
+                </h1>
+                <div className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[9px] font-mono font-semibold tracking-wider">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  NODE 01 • ACTIVE
+                </div>
+              </div>
+              <p className="text-[9px] font-mono uppercase tracking-[0.22em] text-primary">
+                Elitethics Forensic Intelligence Engine
+              </p>
+            </div>
+          </div>
+
+          {/* Action Center Modals & Signout */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            
+            {/* Export CSV */}
+            <Button
+              onClick={exportCasesCSV}
+              variant="outline"
+              size="sm"
+              className="hidden md:inline-flex h-9 border-white/10 bg-card/60 hover:bg-white/10 text-xs font-semibold uppercase tracking-wider rounded-lg"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 mr-2 text-primary" />
+              Export CSV
+            </Button>
+
+            {/* Resolutions Modal */}
             <Dialog open={isStoryDialogOpen} onOpenChange={setIsStoryDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="border-white/5 bg-white/5 uppercase text-[9px] font-black tracking-widest h-9">
-                  <Star className="w-3.5 h-3.5 mr-2" /> Resolutions
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-9 border-white/10 bg-card/60 hover:bg-white/10 text-xs font-semibold uppercase tracking-wider rounded-lg"
+                >
+                  <Star className="w-3.5 h-3.5 mr-1.5 text-primary" />
+                  <span className="hidden sm:inline">Resolutions</span>
+                  <Badge className="ml-1.5 px-1.5 py-0 h-4 bg-primary/20 text-primary border-primary/30 text-[9px]">
+                    {stories.length}
+                  </Badge>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="glass-card border-white/10 max-w-5xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="glass-card border-white/15 max-w-5xl max-h-[90vh] overflow-y-auto p-6 sm:p-8">
                 <DialogHeader>
-                  <DialogTitle className="text-xl font-headline font-bold uppercase tracking-tight">Forensic Case Records</DialogTitle>
-                  <DialogDescription className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">Manage institutional case insights and technical outcomes</DialogDescription>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-mono uppercase tracking-wider w-fit mb-2">
+                    <Sparkles className="w-3 h-3" /> Case Evidence Showcases
+                  </div>
+                  <DialogTitle className="text-2xl font-headline font-bold uppercase tracking-tight text-white">
+                    Forensic Case Resolutions
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-muted-foreground">
+                    Create and manage verified case insights and client recovery outcomes presented on the public portal.
+                  </DialogDescription>
                 </DialogHeader>
                 
-                <div className="py-6 space-y-8">
-                  <div className="grid md:grid-cols-2 gap-8 p-8 border border-primary/20 bg-primary/5">
-                    <div className="space-y-4">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><Plus className="w-4 h-4" /> Register New Insight</h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label className="text-[8px] uppercase tracking-widest">Case Identifier</Label>
-                          <Input placeholder="LRX-00000" className="bg-black/50 border-white/10" value={storyForm.case_id} onChange={e => setStoryForm({...storyForm, case_id: e.target.value})} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-[8px] uppercase tracking-widest">Division</Label>
-                          <Input placeholder="Trading Fraud" className="bg-black/50 border-white/10" value={storyForm.case_type} onChange={e => setStoryForm({...storyForm, case_type: e.target.value})} />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label className="text-[8px] uppercase tracking-widest">Value Resolved</Label>
-                          <Input placeholder="$50,000" className="bg-black/50 border-white/10" value={storyForm.amount} onChange={e => setStoryForm({...storyForm, amount: e.target.value})} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-[8px] uppercase tracking-widest">Visual Class</Label>
-                          <Select value={storyForm.icon_name} onValueChange={val => setStoryForm({...storyForm, icon_name: val})}>
-                            <SelectTrigger className="bg-black/50 border-white/10">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="TrendingUp">Market/Forex</SelectItem>
-                              <SelectItem value="Landmark">Institutional</SelectItem>
-                              <SelectItem value="Wallet">Digital Asset/Crypto</SelectItem>
-                              <SelectItem value="Briefcase">Employment</SelectItem>
-                              <SelectItem value="Database">Intelligence</SelectItem>
-                              <SelectItem value="Search">Forensics</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-[8px] uppercase tracking-widest">Technical Challenge</Label>
-                        <Input placeholder="e.g. Obfuscated fund movements" className="bg-black/50 border-white/10" value={storyForm.challenge} onChange={e => setStoryForm({...storyForm, challenge: e.target.value})} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-[8px] uppercase tracking-widest">Investigative Focus</Label>
-                        <Input placeholder="e.g. Multi-chain cluster analysis" className="bg-black/50 border-white/10" value={storyForm.focus} onChange={e => setStoryForm({...storyForm, focus: e.target.value})} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-[8px] uppercase tracking-widest">Technical Outcome</Label>
-                        <Input placeholder="e.g. Asset interdiction successful" className="bg-black/50 border-white/10" value={storyForm.outcome} onChange={e => setStoryForm({...storyForm, outcome: e.target.value})} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-[8px] uppercase tracking-widest">Summary Narrative</Label>
-                        <Textarea placeholder="Clinical summary..." className="bg-black/50 border-white/10 min-h-[80px]" value={storyForm.narrative} onChange={e => setStoryForm({...storyForm, narrative: e.target.value})} />
-                      </div>
-                      <button onClick={saveStory} className="w-full bg-primary text-black font-black uppercase tracking-widest text-[10px] h-12 hover:bg-primary/90 transition-colors">Register Resolution</button>
-                    </div>
+                <div className="py-6 grid md:grid-cols-2 gap-8">
+                  {/* Form */}
+                  <div className="p-6 rounded-xl border border-primary/25 bg-primary/[0.03] space-y-4">
+                    <h4 className="text-xs font-headline font-bold uppercase tracking-wider text-primary flex items-center gap-2">
+                      <Plus className="w-4 h-4" /> Register New Case Outcome
+                    </h4>
                     
-                    <div className="space-y-4">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Live Insights</h4>
-                      <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
-                        {stories.map(s => (
-                          <div key={s.id} className="p-4 bg-white/5 border border-white/5 flex justify-between items-start group">
-                            <div>
-                              <p className="text-[9px] font-black text-primary uppercase">{s.case_id} | {s.case_type}</p>
-                              <p className="text-[10px] font-bold text-white mt-1">{s.challenge}</p>
-                              <p className="text-[8px] text-muted-foreground mt-2 line-clamp-1">{s.outcome}</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] uppercase font-mono tracking-wider text-muted-foreground">Case ID</Label>
+                        <Input 
+                          placeholder="e.g. ET-84920" 
+                          className="bg-black/40 border-white/10 text-xs h-9" 
+                          value={storyForm.case_id} 
+                          onChange={e => setStoryForm({...storyForm, case_id: e.target.value})} 
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] uppercase font-mono tracking-wider text-muted-foreground">Division</Label>
+                        <Input 
+                          placeholder="e.g. Crypto / Forex" 
+                          className="bg-black/40 border-white/10 text-xs h-9" 
+                          value={storyForm.case_type} 
+                          onChange={e => setStoryForm({...storyForm, case_type: e.target.value})} 
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] uppercase font-mono tracking-wider text-muted-foreground">Recovered / Traced</Label>
+                        <Input 
+                          placeholder="e.g. $145,000 USD" 
+                          className="bg-black/40 border-white/10 text-xs h-9" 
+                          value={storyForm.amount} 
+                          onChange={e => setStoryForm({...storyForm, amount: e.target.value})} 
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] uppercase font-mono tracking-wider text-muted-foreground">Visual Category</Label>
+                        <Select value={storyForm.icon_name} onValueChange={val => setStoryForm({...storyForm, icon_name: val})}>
+                          <SelectTrigger className="bg-black/40 border-white/10 text-xs h-9">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-card border-white/10">
+                            <SelectItem value="TrendingUp">Market / Forex</SelectItem>
+                            <SelectItem value="Wallet">Digital Asset / Crypto</SelectItem>
+                            <SelectItem value="Landmark">Institutional Wire</SelectItem>
+                            <SelectItem value="Briefcase">Advance Fee / Loan</SelectItem>
+                            <SelectItem value="Database">Darknet Tracing</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] uppercase font-mono tracking-wider text-muted-foreground">Technical Challenge</Label>
+                      <Input 
+                        placeholder="e.g. Multi-hop wallet peeling and obfuscated mixers" 
+                        className="bg-black/40 border-white/10 text-xs h-9" 
+                        value={storyForm.challenge} 
+                        onChange={e => setStoryForm({...storyForm, challenge: e.target.value})} 
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] uppercase font-mono tracking-wider text-muted-foreground">Forensic Focus</Label>
+                      <Input 
+                        placeholder="e.g. UTXO cluster analysis and subpoena preparation" 
+                        className="bg-black/40 border-white/10 text-xs h-9" 
+                        value={storyForm.focus} 
+                        onChange={e => setStoryForm({...storyForm, focus: e.target.value})} 
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] uppercase font-mono tracking-wider text-muted-foreground">Investigative Outcome</Label>
+                      <Input 
+                        placeholder="e.g. Wallet cluster frozen on tier-1 exchange" 
+                        className="bg-black/40 border-white/10 text-xs h-9" 
+                        value={storyForm.outcome} 
+                        onChange={e => setStoryForm({...storyForm, outcome: e.target.value})} 
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] uppercase font-mono tracking-wider text-muted-foreground">Public Case Narrative</Label>
+                      <Textarea 
+                        placeholder="Clinical summary of the case..." 
+                        className="bg-black/40 border-white/10 text-xs min-h-[70px]" 
+                        value={storyForm.narrative} 
+                        onChange={e => setStoryForm({...storyForm, narrative: e.target.value})} 
+                      />
+                    </div>
+
+                    <Button 
+                      onClick={saveStory} 
+                      className="w-full bg-primary text-black font-bold uppercase tracking-wider text-xs h-10 hover:bg-primary/90"
+                    >
+                      Publish Resolution
+                    </Button>
+                  </div>
+
+                  {/* List */}
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-headline font-bold uppercase tracking-wider text-muted-foreground">
+                      Published Case Insights ({stories.length})
+                    </h4>
+                    
+                    <div className="space-y-2.5 max-h-[520px] overflow-y-auto pr-1">
+                      {stories.length === 0 ? (
+                        <div className="p-8 border border-dashed border-white/10 text-center rounded-xl">
+                          <p className="text-xs text-muted-foreground">No case insights registered yet.</p>
+                        </div>
+                      ) : (
+                        stories.map(s => (
+                          <div key={s.id} className="p-4 bg-card/60 border border-white/10 rounded-xl flex justify-between items-start group hover:border-primary/30 transition-all">
+                            <div className="space-y-1 pr-3">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-[9px] font-mono text-primary border-primary/30">
+                                  {s.case_id}
+                                </Badge>
+                                <span className="text-[11px] font-bold text-white uppercase">{s.case_type}</span>
+                                {s.amount && (
+                                  <span className="text-[11px] font-mono text-emerald-400 font-bold ml-1">{s.amount}</span>
+                                )}
+                              </div>
+                              <p className="text-xs font-semibold text-white/90">{s.challenge}</p>
+                              <p className="text-[11px] text-muted-foreground line-clamp-2">{s.outcome}</p>
                             </div>
-                            <Button variant="ghost" size="icon" onClick={() => deleteStory(s.id)} className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => deleteStory(s.id)} 
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"
+                            >
                               <Trash2 className="w-3.5 h-3.5" />
                             </Button>
                           </div>
-                        ))}
-                      </div>
+                        ))
+                      )}
                     </div>
                   </div>
                 </div>
               </DialogContent>
             </Dialog>
 
+            {/* Branding Modal */}
             <Dialog>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="border-white/5 bg-white/5 uppercase text-[9px] font-black tracking-widest h-9">
-                  <Settings className="w-3.5 h-3.5 mr-2" /> Branding
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-9 border-white/10 bg-card/60 hover:bg-white/10 text-xs font-semibold uppercase tracking-wider rounded-lg"
+                >
+                  <Settings className="w-3.5 h-3.5 mr-1.5 text-primary" />
+                  <span className="hidden sm:inline">Branding</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="glass-card border-white/10 max-w-md max-h-[90vh] overflow-y-auto">
+              <DialogContent className="glass-card border-white/15 max-w-lg max-h-[90vh] overflow-y-auto p-6 sm:p-8">
                 <DialogHeader>
-                  <DialogTitle className="text-xl font-headline font-bold uppercase tracking-tight">Branding Management</DialogTitle>
-                  <DialogDescription className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">Update website logo and hero background</DialogDescription>
+                  <DialogTitle className="text-xl font-headline font-bold uppercase tracking-tight text-white">
+                    Platform Assets & Branding
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-muted-foreground">
+                    Upload official logos and high-resolution hero backgrounds to synchronize with the public site.
+                  </DialogDescription>
                 </DialogHeader>
-                <div className="py-6 space-y-8">
-                  {/* Logo Upload Section */}
-                  <div className="space-y-4">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                      <ImageIcon className="w-3.5 h-3.5" /> Platform Logo
+
+                <div className="py-6 space-y-6">
+                  {/* Logo Upload */}
+                  <div className="p-5 border border-white/10 bg-card/50 rounded-xl space-y-3">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2">
+                      <ImageIcon className="w-4 h-4" /> Official Platform Logo
                     </Label>
-                    <div className="flex flex-col items-center justify-center p-6 border border-dashed border-white/10 bg-white/5 relative group cursor-pointer overflow-hidden">
+                    <div className="flex flex-col items-center justify-center p-6 border border-dashed border-white/15 bg-black/40 rounded-lg relative cursor-pointer group hover:border-primary/50 transition-colors">
                       <input 
                         type="file" 
                         accept="image/*" 
-                        className="absolute inset-0 opacity-0 cursor-pointer z-20"
+                        className="absolute inset-0 opacity-0 cursor-pointer z-10"
                         onChange={handleLogoChange}
                       />
                       {logoPreview ? (
-                        <img src={logoPreview} alt="Preview" className="h-16 w-auto object-contain mb-4" />
+                        <img src={logoPreview} alt="Preview" className="h-14 w-auto object-contain mb-2" />
                       ) : (
-                        <Upload className="w-8 h-8 text-muted-foreground opacity-30 mb-4" />
+                        <Upload className="w-7 h-7 text-muted-foreground mb-2 group-hover:text-primary transition-colors" />
                       )}
-                      <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground text-center px-4">
-                        {logoFile ? logoFile.name : 'Select Logo (PNG/SVG Preferred)'}
+                      <p className="text-[11px] text-muted-foreground font-mono uppercase tracking-wider text-center">
+                        {logoFile ? logoFile.name : 'Choose Logo (PNG / SVG with transparency)'}
                       </p>
                     </div>
                     <Button 
                       onClick={uploadLogo} 
                       disabled={!logoFile || uploadingLogo}
                       size="sm"
-                      className="w-full h-10 bg-primary text-black font-black uppercase tracking-widest premium-cta"
+                      className="w-full h-9 bg-primary text-black font-bold uppercase tracking-wider text-xs"
                     >
-                      {uploadingLogo ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Upload className="w-4 h-4 mr-2" />}
+                      {uploadingLogo ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : <Upload className="w-3.5 h-3.5 mr-2" />}
                       Sync Logo
                     </Button>
                   </div>
 
-                  {/* Hero Background Upload Section */}
-                  <div className="space-y-4">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                      <ImageIcon className="w-3.5 h-3.5" /> Hero Background
+                  {/* Hero Background Upload */}
+                  <div className="p-5 border border-white/10 bg-card/50 rounded-xl space-y-3">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2">
+                      <ImageIcon className="w-4 h-4" /> Hero Ambient Background
                     </Label>
-                    <div className="flex flex-col items-center justify-center p-6 border border-dashed border-white/10 bg-white/5 relative group cursor-pointer overflow-hidden">
+                    <div className="flex flex-col items-center justify-center p-6 border border-dashed border-white/15 bg-black/40 rounded-lg relative cursor-pointer group hover:border-primary/50 transition-colors">
                       <input 
                         type="file" 
                         accept="image/*" 
-                        className="absolute inset-0 opacity-0 cursor-pointer z-20"
+                        className="absolute inset-0 opacity-0 cursor-pointer z-10"
                         onChange={handleHeroBgChange}
                       />
                       {heroBgPreview ? (
-                        <img src={heroBgPreview} alt="Preview" className="h-16 w-auto object-contain mb-4" />
+                        <img src={heroBgPreview} alt="Preview" className="h-20 w-auto object-cover rounded mb-2" />
                       ) : (
-                        <Upload className="w-8 h-8 text-muted-foreground opacity-30 mb-4" />
+                        <Upload className="w-7 h-7 text-muted-foreground mb-2 group-hover:text-primary transition-colors" />
                       )}
-                      <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground text-center px-4">
-                        {heroBgFile ? heroBgFile.name : 'Select Hero Background (High-Res)'}
+                      <p className="text-[11px] text-muted-foreground font-mono uppercase tracking-wider text-center">
+                        {heroBgFile ? heroBgFile.name : 'Choose High-Res Background (PNG / WebP)'}
                       </p>
                     </div>
                     <Button 
                       onClick={uploadHeroBg} 
                       disabled={!heroBgFile || uploadingHeroBg}
                       size="sm"
-                      className="w-full h-10 bg-primary text-black font-black uppercase tracking-widest premium-cta"
+                      className="w-full h-9 bg-primary text-black font-bold uppercase tracking-wider text-xs"
                     >
-                      {uploadingHeroBg ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Upload className="w-4 h-4 mr-2" />}
+                      {uploadingHeroBg ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : <Upload className="w-3.5 h-3.5 mr-2" />}
                       Sync Hero Background
                     </Button>
-                  </div>
-                  
-                  <div className="p-4 bg-primary/5 border border-primary/20 space-y-3">
-                    <p className="text-[10px] text-primary font-bold uppercase tracking-widest flex items-center gap-2">
-                      <Info className="w-3.5 h-3.5" /> Project Configuration
-                    </p>
-                    <p className="text-[8px] text-muted-foreground uppercase tracking-widest leading-relaxed">
-                      1. Go to Supabase &gt; Storage<br />
-                      2. Create a bucket named <span className="text-primary font-bold">assets</span><br />
-                      3. Set the bucket to <span className="text-primary font-bold">Public</span>
-                    </p>
                   </div>
                 </div>
               </DialogContent>
             </Dialog>
 
+            {/* Media Library Modal */}
             <Dialog>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="border-white/5 bg-white/5 uppercase text-[9px] font-black tracking-widest h-9">
-                  <Layers className="w-3.5 h-3.5 mr-2" /> Media Library
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-9 border-white/10 bg-card/60 hover:bg-white/10 text-xs font-semibold uppercase tracking-wider rounded-lg"
+                >
+                  <Layers className="w-3.5 h-3.5 mr-1.5 text-primary" />
+                  <span className="hidden sm:inline">Media Library</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="glass-card border-white/10 max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="glass-card border-white/15 max-w-3xl max-h-[90vh] overflow-y-auto p-6 sm:p-8">
                 <DialogHeader>
-                  <DialogTitle className="text-xl font-headline font-bold uppercase tracking-tight">Technical Asset Library</DialogTitle>
-                  <DialogDescription className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">Manage website imagery and forensic personnel avatars</DialogDescription>
+                  <DialogTitle className="text-xl font-headline font-bold uppercase tracking-tight text-white">
+                    Platform Media Assets
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-muted-foreground">
+                    Replace forensic analyst avatars and institutional imagery across the site.
+                  </DialogDescription>
                 </DialogHeader>
                 
-                <div className="py-6 space-y-8">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div className="py-6 space-y-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {placeholderData.placeholderImages.map((asset) => (
                       <div 
                         key={asset.id}
                         onClick={() => setSelectedAssetId(asset.id)}
                         className={cn(
-                          "p-4 border border-white/5 bg-white/5 cursor-pointer hover:border-primary/50 transition-all text-center space-y-3",
-                          selectedAssetId === asset.id && "border-primary bg-primary/5"
+                          "p-3 rounded-lg border border-white/10 bg-card/50 cursor-pointer hover:border-primary/50 transition-all text-center space-y-2",
+                          selectedAssetId === asset.id && "border-primary ring-1 ring-primary bg-primary/10"
                         )}
                       >
-                        <div className="aspect-[4/5] bg-black/40 flex items-center justify-center relative overflow-hidden">
-                           <img src={asset.imageUrl} alt={asset.id} className="object-cover w-full h-full opacity-40" />
-                           <div className="absolute inset-0 flex items-center justify-center">
-                              <ImageIcon className="w-6 h-6 text-white opacity-20" />
-                           </div>
+                        <div className="aspect-[4/3] bg-black/50 rounded flex items-center justify-center relative overflow-hidden">
+                          <img src={asset.imageUrl} alt={asset.id} className="object-cover w-full h-full opacity-60" />
                         </div>
-                        <p className="text-[8px] font-black uppercase tracking-widest">{asset.id.replace('-', ' ')}</p>
+                        <p className="text-[10px] font-mono uppercase font-bold text-white/90 truncate">{asset.id.replace('-', ' ')}</p>
                       </div>
                     ))}
                   </div>
 
                   {selectedAssetId && (
-                    <div className="p-8 border border-primary/20 bg-primary/5 space-y-6 animate-in fade-in slide-in-from-top-4 duration-300">
+                    <div className="p-6 rounded-xl border border-primary/30 bg-primary/[0.04] space-y-4">
                       <div className="flex justify-between items-center">
-                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Upload Replacement for {selectedAssetId}</h4>
-                        <Button variant="ghost" size="sm" onClick={() => setSelectedAssetId(null)} className="h-6 text-[8px] uppercase font-bold tracking-widest">Cancel</Button>
+                        <h4 className="text-xs font-mono uppercase font-bold text-primary">
+                          Replace Media: {selectedAssetId}
+                        </h4>
+                        <Button variant="ghost" size="sm" onClick={() => setSelectedAssetId(null)} className="h-6 text-[10px] uppercase">
+                          Cancel
+                        </Button>
                       </div>
-                      
-                      <div className="flex flex-col items-center justify-center p-8 border border-dashed border-primary/20 bg-black/40 relative group cursor-pointer">
+
+                      <div className="flex flex-col items-center justify-center p-6 border border-dashed border-primary/30 bg-black/50 rounded-lg relative cursor-pointer">
                         <input 
                           type="file" 
                           accept="image/*" 
-                          className="absolute inset-0 opacity-0 cursor-pointer z-20"
+                          className="absolute inset-0 opacity-0 cursor-pointer z-10"
                           onChange={handleAssetChange}
                         />
                         {assetPreview ? (
-                          <img src={assetPreview} alt="Preview" className="h-32 w-auto object-contain mb-4" />
+                          <img src={assetPreview} alt="Preview" className="h-28 w-auto object-contain mb-2" />
                         ) : (
-                          <Upload className="w-10 h-10 text-primary opacity-30 mb-4" />
+                          <Upload className="w-8 h-8 text-primary/60 mb-2" />
                         )}
-                        <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
-                          {assetFile ? assetFile.name : 'Click to Upload High-Res Media'}
+                        <p className="text-xs font-mono uppercase text-muted-foreground">
+                          {assetFile ? assetFile.name : 'Select replacement file'}
                         </p>
                       </div>
 
                       <Button 
                         onClick={uploadAsset} 
                         disabled={!assetFile || uploadingAsset}
-                        className="w-full h-12 bg-primary text-black font-black uppercase tracking-widest premium-cta"
+                        className="w-full h-10 bg-primary text-black font-bold uppercase tracking-wider text-xs"
                       >
                         {uploadingAsset ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <ShieldCheck className="w-4 h-4 mr-2" />}
-                        Sync Media Asset
+                        Synchronize Asset
                       </Button>
                     </div>
                   )}
@@ -720,292 +1050,812 @@ export default function AdminDashboard() {
               </DialogContent>
             </Dialog>
 
-            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground hover:text-destructive">
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
+            {/* Logout */}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleLogout} 
+              className="h-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 text-xs font-semibold uppercase tracking-wider rounded-lg"
+            >
+              <LogOut className="w-3.5 h-3.5 mr-1.5" />
+              <span className="hidden sm:inline">Logout</span>
             </Button>
           </div>
-        </div>
-      </nav>
 
-      <div className="p-4 md:p-8 max-w-[1600px] mx-auto space-y-8">
+        </div>
+      </header>
+
+      {/* MAIN DASHBOARD CONTENT */}
+      <div className="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-8">
+        
+        {/* STATS TILES (CLICKABLE FILTERS) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          {[
-            { label: 'Total Investigations', value: cases.length, icon: FileText },
-            { label: 'Critical Risk Cases', value: cases.filter(c => c.risk_level === 'Critical').length, icon: AlertCircle, color: 'text-destructive' },
-            { label: 'High Trust Assets', value: cases.filter(c => c.evidence_integrity === 'Substantial').length, icon: Shield, color: 'text-primary' },
-            { label: 'Pending Verification', value: cases.filter(c => c.status === 'Review Pending').length, icon: Clock, color: 'text-secondary' },
-          ].map((stat, i) => (
-            <Card key={i} className="glass-card border-white/5 hover:border-primary/20 transition-all p-6 md:p-8">
-              <div className="flex justify-between items-start mb-4">
-                <div className="p-3 bg-white/5 rounded">
-                  <stat.icon className={`w-5 h-5 ${stat.color || 'text-muted-foreground'}`} />
-                </div>
-                <Badge variant="outline" className="border-white/10 text-[9px] uppercase tracking-widest">Live</Badge>
+          
+          {/* Tile 1: Total Cases */}
+          <Card 
+            onClick={() => { setStatusFilter('all'); setRiskFilter('all'); }}
+            className={cn(
+              "glass-card border-white/10 hover:border-primary/40 transition-all cursor-pointer p-6 rounded-2xl relative overflow-hidden group",
+              statusFilter === 'all' && riskFilter === 'all' && "border-primary/40 bg-card/80"
+            )}
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div className="p-3 bg-primary/10 rounded-xl border border-primary/20 text-primary">
+                <FileText className="w-5 h-5" />
               </div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">{stat.label}</p>
-              <h3 className="text-2xl md:text-3xl font-headline font-bold">{stat.value}</h3>
-            </Card>
-          ))}
+              <Badge variant="outline" className="border-white/10 text-[9px] font-mono tracking-widest uppercase">
+                All Ledgers
+              </Badge>
+            </div>
+            <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1">
+              Total Inbound Dossiers
+            </p>
+            <div className="flex items-baseline gap-2">
+              <h3 className="text-3xl font-headline font-bold text-white tabular-nums">
+                {cases.length}
+              </h3>
+              <span className="text-xs text-muted-foreground">cases logged</span>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-primary/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          </Card>
+
+          {/* Tile 2: Critical Risk */}
+          <Card 
+            onClick={() => { setRiskFilter('Critical'); }}
+            className={cn(
+              "glass-card border-white/10 hover:border-destructive/40 transition-all cursor-pointer p-6 rounded-2xl relative overflow-hidden group",
+              riskFilter === 'Critical' && "border-destructive/50 bg-destructive/[0.05]"
+            )}
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div className="p-3 bg-destructive/10 rounded-xl border border-destructive/20 text-destructive">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <Badge className="bg-destructive/20 text-destructive border-destructive/30 text-[9px] font-mono uppercase tracking-widest">
+                Priority
+              </Badge>
+            </div>
+            <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1">
+              Critical Risk Factors
+            </p>
+            <div className="flex items-baseline gap-2">
+              <h3 className="text-3xl font-headline font-bold text-destructive tabular-nums">
+                {cases.filter(c => (c.risk_level || '').toLowerCase() === 'critical').length}
+              </h3>
+              <span className="text-xs text-muted-foreground">require fast interdiction</span>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-destructive/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          </Card>
+
+          {/* Tile 3: Investigating Active */}
+          <Card 
+            onClick={() => { setStatusFilter('Investigating'); }}
+            className={cn(
+              "glass-card border-white/10 hover:border-amber-500/40 transition-all cursor-pointer p-6 rounded-2xl relative overflow-hidden group",
+              statusFilter === 'Investigating' && "border-amber-500/50 bg-amber-500/[0.05]"
+            )}
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div className="p-3 bg-amber-500/10 rounded-xl border border-amber-500/20 text-amber-400">
+                <Activity className="w-5 h-5" />
+              </div>
+              <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[9px] font-mono uppercase tracking-widest">
+                In Progress
+              </Badge>
+            </div>
+            <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1">
+              Active Investigations
+            </p>
+            <div className="flex items-baseline gap-2">
+              <h3 className="text-3xl font-headline font-bold text-amber-400 tabular-nums">
+                {cases.filter(c => (c.status || '').toLowerCase() === 'investigating').length}
+              </h3>
+              <span className="text-xs text-muted-foreground">tracing active</span>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          </Card>
+
+          {/* Tile 4: Review Pending */}
+          <Card 
+            onClick={() => { setStatusFilter('Review Pending'); }}
+            className={cn(
+              "glass-card border-white/10 hover:border-primary/40 transition-all cursor-pointer p-6 rounded-2xl relative overflow-hidden group",
+              statusFilter === 'Review Pending' && "border-primary/50 bg-primary/[0.05]"
+            )}
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div className="p-3 bg-primary/10 rounded-xl border border-primary/20 text-primary">
+                <Clock className="w-5 h-5" />
+              </div>
+              <Badge className="bg-primary/20 text-primary border-primary/30 text-[9px] font-mono uppercase tracking-widest">
+                Triage
+              </Badge>
+            </div>
+            <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1">
+              Pending Initial Triage
+            </p>
+            <div className="flex items-baseline gap-2">
+              <h3 className="text-3xl font-headline font-bold text-white tabular-nums">
+                {cases.filter(c => (c.status || '').toLowerCase().includes('pending')).length}
+              </h3>
+              <span className="text-xs text-muted-foreground">awaiting analyst review</span>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-primary/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          </Card>
+
         </div>
 
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="relative w-full md:w-96">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input 
-              placeholder="Search Case ID or Participant..."
-              className="w-full h-12 bg-card/50 border border-white/5 rounded-none pl-12 pr-4 text-sm focus:border-primary/50 outline-none transition-colors"
-            />
+        {/* SEARCH, QUICK TABS & FILTER TOOLBAR */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-card/60 border border-white/10 backdrop-blur-md space-y-4">
+          
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+            
+            {/* Search Input */}
+            <div className="relative flex-1 max-w-xl">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              <Input 
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search by Case ID, Participant name, Email, Country, or Description..."
+                className="w-full h-11 pl-10 pr-10 bg-black/40 border-white/10 text-xs sm:text-sm rounded-xl focus:border-primary/50 text-white placeholder:text-muted-foreground/70"
+              />
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Quick Status Pill Tabs (Desktop) */}
+            <div className="flex items-center gap-1.5 p-1 bg-black/40 border border-white/10 rounded-xl overflow-x-auto">
+              {[
+                { id: 'all', label: 'All Dossiers' },
+                { id: 'Review Pending', label: 'Pending' },
+                { id: 'Investigating', label: 'Investigating' },
+                { id: 'Resolved', label: 'Resolved' },
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setStatusFilter(tab.id)}
+                  className={cn(
+                    "px-3.5 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all whitespace-nowrap",
+                    statusFilter.toLowerCase() === tab.id.toLowerCase()
+                      ? "bg-primary text-black font-bold shadow-md shadow-primary/20"
+                      : "text-muted-foreground hover:text-white hover:bg-white/5"
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Filter Dropdowns & Refresh */}
+            <div className="flex items-center gap-2.5">
+              
+              {/* Detailed Filter Popover */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    className={cn(
+                      "h-11 border-white/10 bg-black/40 text-xs font-semibold uppercase tracking-wider rounded-xl",
+                      activeFiltersCount > 0 && "border-primary text-primary bg-primary/5"
+                    )}
+                  >
+                    <Filter className="w-3.5 h-3.5 mr-2" />
+                    Filters
+                    {activeFiltersCount > 0 && (
+                      <Badge className="ml-2 px-1.5 py-0 h-4 bg-primary text-black text-[9px] font-bold">
+                        {activeFiltersCount}
+                      </Badge>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-80 p-5 bg-[#12161E] border-white/15 text-foreground rounded-2xl shadow-2xl space-y-4">
+                  <div className="flex justify-between items-center pb-2 border-b border-white/10">
+                    <h4 className="text-xs font-headline font-bold uppercase tracking-wider text-white">
+                      Filter Ledger Records
+                    </h4>
+                    {activeFiltersCount > 0 && (
+                      <button 
+                        onClick={resetFilters} 
+                        className="text-[10px] uppercase font-mono text-primary hover:underline"
+                      >
+                        Reset All
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] uppercase font-mono tracking-wider text-muted-foreground">Risk Level</Label>
+                      <Select value={riskFilter} onValueChange={setRiskFilter}>
+                        <SelectTrigger className="h-9 bg-black/40 border-white/10 text-xs rounded-lg">
+                          <SelectValue placeholder="All Risk Levels" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-card border-white/15">
+                          <SelectItem value="all">All Risk Levels</SelectItem>
+                          <SelectItem value="Critical">Critical</SelectItem>
+                          <SelectItem value="High">High</SelectItem>
+                          <SelectItem value="Initial Intake">Initial Intake</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] uppercase font-mono tracking-wider text-muted-foreground">Scam Category</Label>
+                      <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                        <SelectTrigger className="h-9 bg-black/40 border-white/10 text-xs rounded-lg">
+                          <SelectValue placeholder="All Categories" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-card border-white/15">
+                          <SelectItem value="all">All Categories</SelectItem>
+                          <SelectItem value="crypto">Cryptocurrency / Blockchain</SelectItem>
+                          <SelectItem value="invest">Investment / Fake Broker</SelectItem>
+                          <SelectItem value="loan">Advance Fee / Loan</SelectItem>
+                          <SelectItem value="romance">Romance / Imposter</SelectItem>
+                          <SelectItem value="wallet">Wallet Compromise</SelectItem>
+                          <SelectItem value="trading">Trading / Withdrawal Block</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] uppercase font-mono tracking-wider text-muted-foreground">Order by Date</Label>
+                      <Select value={sortOrder} onValueChange={(val: any) => setSortOrder(val)}>
+                        <SelectTrigger className="h-9 bg-black/40 border-white/10 text-xs rounded-lg">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-card border-white/15">
+                          <SelectItem value="newest">Newest Intake First</SelectItem>
+                          <SelectItem value="oldest">Oldest Intake First</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Refresh Button */}
+              <Button 
+                onClick={fetchCases} 
+                variant="outline" 
+                className="h-11 border-white/10 bg-black/40 hover:bg-white/10 text-xs font-semibold uppercase tracking-wider rounded-xl"
+              >
+                <RefreshCw className={cn("w-3.5 h-3.5 mr-2 text-primary", loading && "animate-spin")} />
+                Refresh
+              </Button>
+
+            </div>
+
           </div>
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <Button variant="outline" className="flex-1 md:flex-none h-12 border-white/5 bg-card/50 uppercase text-[10px] font-black tracking-widest">
-              <Filter className="w-3.5 h-3.5 mr-2" /> Filters
-            </Button>
-            <Button onClick={fetchCases} variant="outline" className="flex-1 md:flex-none h-12 border-white/5 bg-card/50 uppercase text-[10px] font-black tracking-widest">
-              Refresh Node
-            </Button>
-          </div>
+
+          {/* Active Filter Indicators Bar */}
+          {activeFiltersCount > 0 && (
+            <div className="flex items-center gap-2 pt-2 border-t border-white/5 flex-wrap">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                Active Criteria:
+              </span>
+              {searchQuery && (
+                <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary text-[10px] pl-2 pr-1 py-0.5 rounded-md">
+                  Query: "{searchQuery}"
+                  <button onClick={() => setSearchQuery('')} className="ml-1.5 hover:text-white"><X className="w-3 h-3" /></button>
+                </Badge>
+              )}
+              {statusFilter !== 'all' && (
+                <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary text-[10px] pl-2 pr-1 py-0.5 rounded-md">
+                  Status: {statusFilter}
+                  <button onClick={() => setStatusFilter('all')} className="ml-1.5 hover:text-white"><X className="w-3 h-3" /></button>
+                </Badge>
+              )}
+              {riskFilter !== 'all' && (
+                <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary text-[10px] pl-2 pr-1 py-0.5 rounded-md">
+                  Risk: {riskFilter}
+                  <button onClick={() => setRiskFilter('all')} className="ml-1.5 hover:text-white"><X className="w-3 h-3" /></button>
+                </Badge>
+              )}
+              {categoryFilter !== 'all' && (
+                <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary text-[10px] pl-2 pr-1 py-0.5 rounded-md">
+                  Category: {categoryFilter}
+                  <button onClick={() => setCategoryFilter('all')} className="ml-1.5 hover:text-white"><X className="w-3 h-3" /></button>
+                </Badge>
+              )}
+              <button 
+                onClick={resetFilters} 
+                className="text-[10px] font-mono text-muted-foreground hover:text-destructive uppercase underline ml-auto"
+              >
+                Clear All
+              </button>
+            </div>
+          )}
+
         </div>
 
-        <Card className="glass-card border-white/5 overflow-hidden">
+        {/* CASES TABLE */}
+        <Card className="glass-card border-white/10 rounded-2xl overflow-hidden shadow-2xl">
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader className="bg-white/5">
-                <TableRow className="hover:bg-transparent border-white/5">
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 px-4 md:px-8">Case Identity</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest">Participant</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest">Category</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-center">Risk Factor</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-center">Status</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-right px-4 md:px-8">Operation</TableHead>
+              <TableHeader className="bg-[#12161E] border-b border-white/10">
+                <TableRow className="hover:bg-transparent border-white/10">
+                  <TableHead className="text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground py-5 px-6">
+                    Case Identity
+                  </TableHead>
+                  <TableHead className="text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground">
+                    Participant Contact
+                  </TableHead>
+                  <TableHead className="text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground">
+                    Fraud Category
+                  </TableHead>
+                  <TableHead className="text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground text-center">
+                    Risk Factor
+                  </TableHead>
+                  <TableHead className="text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground text-center">
+                    Current Status
+                  </TableHead>
+                  <TableHead className="text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground text-right px-6">
+                    Actions
+                  </TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
+
+              <TableBody className="divide-y divide-white/5">
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-64 text-center">
-                      <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary mb-4" />
-                      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Synchronizing Records...</p>
+                    <TableCell colSpan={6} className="h-72 text-center">
+                      <div className="flex flex-col items-center justify-center space-y-4">
+                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                        <p className="text-xs font-mono uppercase tracking-[0.25em] text-muted-foreground">
+                          Querying Delaware Node Ledgers...
+                        </p>
+                      </div>
                     </TableCell>
                   </TableRow>
-                ) : cases.length === 0 ? (
+                ) : filteredCases.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-64 text-center">
-                      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">No Investigative Records Found</p>
+                    <TableCell colSpan={6} className="h-80 text-center">
+                      <div className="max-w-md mx-auto flex flex-col items-center justify-center py-10 space-y-4">
+                        <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-muted-foreground">
+                          <ShieldCheck className="w-8 h-8 text-primary/60" />
+                        </div>
+                        <div className="space-y-1">
+                          <h4 className="text-base font-headline font-bold uppercase tracking-tight text-white">
+                            No Investigative Records Found
+                          </h4>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            {cases.length === 0 
+                              ? "Your case database is currently awaiting inbound assessments from client intakes."
+                              : "No records match your active search and filter criteria."}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3 pt-2">
+                          {cases.length === 0 ? (
+                            <Button 
+                              onClick={insertSampleCase} 
+                              size="sm"
+                              className="bg-primary text-black font-bold uppercase text-xs tracking-wider rounded-lg h-9 shadow-lg shadow-primary/20"
+                            >
+                              <Plus className="w-3.5 h-3.5 mr-1.5" /> Inject Sample Dossier
+                            </Button>
+                          ) : (
+                            <Button 
+                              onClick={resetFilters} 
+                              variant="outline" 
+                              size="sm"
+                              className="border-white/10 text-xs uppercase rounded-lg"
+                            >
+                              Reset Filters
+                            </Button>
+                          )}
+                        </div>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  cases.map((c) => (
-                    <TableRow key={c.id} className="border-white/5 hover:bg-white/[0.02] group transition-colors">
-                      <TableCell className="py-4 md:py-6 px-4 md:px-8 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <Fingerprint className="w-4 h-4 text-primary shrink-0" />
-                          <div>
-                            <p className="font-bold text-sm text-white">{c.case_id}</p>
-                            <p className="text-[9px] text-muted-foreground uppercase tracking-widest">
-                              {new Date(c.created_at).toLocaleDateString()}
-                            </p>
+                  filteredCases.map((c) => {
+                    const categoryInfo = getCategoryBadge(c.case_type);
+                    const CategoryIcon = categoryInfo.icon;
+
+                    return (
+                      <TableRow 
+                        key={c.id} 
+                        className="border-white/5 hover:bg-white/[0.02] group transition-colors"
+                      >
+                        {/* Case Identity */}
+                        <TableCell className="py-4 px-6 whitespace-nowrap">
+                          <div className="flex items-center gap-3.5">
+                            <div className="p-2.5 rounded-xl bg-card border border-white/10 text-primary shrink-0 group-hover:border-primary/40 transition-colors">
+                              <Fingerprint className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono font-bold text-sm text-white">
+                                  #{c.case_id}
+                                </span>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(c.case_id);
+                                    toast({ title: "Copied", description: `Case #${c.case_id} copied to clipboard.` });
+                                  }}
+                                  className="text-muted-foreground hover:text-primary transition-colors"
+                                  title="Copy Case ID"
+                                >
+                                  <Copy className="w-3 h-3" />
+                                </button>
+                              </div>
+                              <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mt-0.5">
+                                {new Date(c.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <User className="w-3.5 h-3.5 opacity-50 shrink-0" />
-                          <div>
-                            <p className="text-xs font-medium text-foreground">{c.user_name}</p>
-                            <p className="text-[10px] text-muted-foreground">{c.user_email}</p>
+                        </TableCell>
+
+                        {/* Participant Contact */}
+                        <TableCell className="whitespace-nowrap">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center font-bold text-xs text-primary shrink-0">
+                              {c.user_name ? c.user_name.slice(0, 2).toUpperCase() : 'NA'}
+                            </div>
+                            <div>
+                              <p className="text-xs font-semibold text-white">
+                                {c.user_name || 'Anonymous Intake'}
+                              </p>
+                              <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                                <span>{c.user_email || 'No email provided'}</span>
+                                {c.user_country && (
+                                  <>
+                                    <span>•</span>
+                                    <span className="font-mono uppercase text-[10px] text-white/70">{c.user_country}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        <Badge variant="outline" className="border-white/10 text-[9px] font-black uppercase tracking-widest bg-white/5">
-                          {c.case_type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-center whitespace-nowrap">
-                        <div className="inline-flex items-center gap-2">
+                        </TableCell>
+
+                        {/* Fraud Category */}
+                        <TableCell className="whitespace-nowrap">
                           <div className={cn(
-                            "w-2 h-2 rounded-full",
-                            c.risk_level === 'Critical' ? 'bg-destructive animate-pulse' : 
-                            c.risk_level === 'High' ? 'bg-primary/70' : 'bg-primary'
-                          )} />
-                          <span className={cn(
-                            "text-[10px] font-black uppercase tracking-widest",
-                            c.risk_level === 'Critical' ? 'text-destructive' : 'text-foreground'
-                          )}>{c.risk_level}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center whitespace-nowrap">
-                        <Badge className="bg-primary/10 text-primary border-primary/20 text-[9px] uppercase tracking-widest">
-                          {c.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right px-4 md:px-8 whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-2">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button variant="outline" size="sm" className="h-9 border-white/5 bg-white/5 hover:bg-primary hover:text-black uppercase text-[9px] font-black tracking-widest">
-                                Review
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto glass-card border-white/10 p-0">
-                              <DialogTitle className="sr-only">Investigation Brief #{c.case_id}</DialogTitle>
-                              <DialogDescription className="sr-only">Detailed forensic intake data for participant {c.user_name}.</DialogDescription>
-                              <InstitutionalDecryptor caseId={c.case_id} label="Investigation Brief">
-                                <DialogHeader className="p-6 md:p-8 border-b border-white/5 bg-card/50">
-                                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center w-full gap-4">
-                                    <div className="flex items-center gap-4">
-                                      <div className="p-3 bg-primary/10 rounded">
-                                        <FileText className="w-6 h-6 text-primary" />
-                                      </div>
-                                      <div>
-                                        <div className="text-2xl font-headline font-bold uppercase tracking-tight">Investigation Brief</div>
-                                        <div className="text-[10px] font-black uppercase tracking-widest text-primary">Case #{c.case_id}</div>
-                                      </div>
-                                    </div>
-                                    <Badge className="bg-primary text-black uppercase tracking-widest text-[10px] py-1.5 px-4">{c.status}</Badge>
-                                  </div>
-                                </DialogHeader>
-                                <div className="p-6 md:p-8 space-y-8 md:space-y-12">
-                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-                                    <div className="space-y-4">
-                                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2"><User className="w-3.5 h-3.5" /> Participant Details</h4>
-                                      <div className="p-6 bg-white/5 border border-white/5 space-y-3">
-                                        <div><p className="text-[9px] text-muted-foreground uppercase">Full Name</p><p className="text-sm font-bold">{c.user_name}</p></div>
-                                        <div><p className="text-[9px] text-muted-foreground uppercase">Email</p><p className="text-sm font-bold">{c.user_email}</p></div>
-                                        <div><p className="text-[9px] text-muted-foreground uppercase">Phone</p><p className="text-sm font-bold">{c.user_phone}</p></div>
-                                        <div><p className="text-[9px] text-muted-foreground uppercase">Location</p><p className="text-sm font-bold">{c.user_country}</p></div>
-                                      </div>
-                                    </div>
-                                    <div className="space-y-4">
-                                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Activity className="w-3.5 h-3.5" /> Intake Metrics</h4>
-                                      <div className="p-6 bg-white/5 border border-white/5 space-y-3">
-                                        <div><p className="text-[9px] text-muted-foreground uppercase">Risk Factor</p><p className="text-sm font-bold uppercase text-primary">{c.risk_level}</p></div>
-                                        <div><p className="text-[9px] text-muted-foreground uppercase">Evidence Status</p><p className="text-sm font-bold uppercase">{c.evidence_integrity}</p></div>
-                                        <div><p className="text-[9px] text-muted-foreground uppercase">Preferred Method</p><p className="text-sm font-bold uppercase">{c.preferred_method} ({c.best_contact_time})</p></div>
-                                      </div>
-                                    </div>
-                                    <div className="space-y-4">
-                                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Target className="w-3.5 h-3.5" /> Platform Data</h4>
-                                      <div className="p-6 bg-white/5 border border-white/5 space-y-3">
-                                        {Object.entries(c.form_values || {}).map(([key, val]: any) => (
-                                          <div key={key}>
-                                            <p className="text-[9px] text-muted-foreground uppercase">{key.replace(/([A-Z])/g, ' $1')}</p>
-                                            <p className="text-sm font-bold">{val}</p>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  </div>
+                            "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-medium",
+                            categoryInfo.color
+                          )}>
+                            <CategoryIcon className="w-3.5 h-3.5" />
+                            <span>{categoryInfo.label}</span>
+                          </div>
+                        </TableCell>
 
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div className="space-y-4">
-                                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Search className="w-3.5 h-3.5" /> Technical Narrative</h4>
-                                      <div className="p-6 bg-card border border-white/10 italic text-sm text-foreground/80 leading-relaxed border-l-2 border-l-primary">
-                                        "{c.description}"
-                                      </div>
-                                    </div>
-                                    <div className="space-y-4">
-                                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2"><ShieldCheck className="w-3.5 h-3.5" /> Encrypted Evidence</h4>
-                                      <div className="grid gap-2">
-                                        {c.evidence_files && c.evidence_files.length > 0 ? (
-                                          c.evidence_files.map((file, i) => (
-                                            <a 
-                                              key={i} 
-                                              href={file.url} 
-                                              target="_blank" 
-                                              rel="noopener noreferrer"
-                                              className="flex items-center justify-between p-3 bg-white/5 border border-white/5 hover:border-primary/50 transition-colors group"
-                                            >
-                                              <div className="flex items-center gap-3 min-w-0">
-                                                <FileText className="w-4 h-4 text-primary shrink-0" />
-                                                <span className="text-[11px] font-bold uppercase tracking-tight truncate">{file.name}</span>
-                                              </div>
-                                              <Download className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary shrink-0" />
-                                            </a>
-                                          ))
-                                        ) : (
-                                          <div className="p-4 border border-dashed border-white/5 text-center">
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-50">No Evidence Files Uploaded</p>
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
+                        {/* Risk Factor */}
+                        <TableCell className="text-center whitespace-nowrap">
+                          <div className="inline-flex items-center gap-2">
+                            <span className={cn(
+                              "w-2 h-2 rounded-full",
+                              (c.risk_level || '').toLowerCase() === 'critical' ? 'bg-destructive animate-ping' :
+                              (c.risk_level || '').toLowerCase() === 'high' ? 'bg-amber-400' : 'bg-primary'
+                            )} />
+                            <span className={cn(
+                              "text-xs font-mono font-bold uppercase tracking-wider",
+                              (c.risk_level || '').toLowerCase() === 'critical' ? 'text-destructive font-black' :
+                              (c.risk_level || '').toLowerCase() === 'high' ? 'text-amber-400' : 'text-foreground'
+                            )}>
+                              {c.risk_level || 'Initial'}
+                            </span>
+                          </div>
+                        </TableCell>
 
-                                  {c.result_data?.preliminaryCaseFindings && (
-                                    <div className="space-y-6">
-                                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2"><ShieldCheck className="w-3.5 h-3.5" /> AI Forensic Findings</h4>
-                                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                        {Object.entries(c.result_data.preliminaryCaseFindings).map(([key, val]: any) => (
-                                          <div key={key} className="p-4 bg-white/5 border border-white/5">
-                                            <p className="text-[8px] text-muted-foreground uppercase mb-1">{key.replace(/([A-Z])/g, ' $1')}</p>
-                                            <p className="text-[11px] font-bold uppercase">{val}</p>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {c.result_data?.investigativeFocusAreas && (
-                                    <div className="space-y-6">
-                                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Network className="w-3.5 h-3.5" /> Suggested Roadmap</h4>
-                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {c.result_data.investigativeFocusAreas.map((area: any, i: number) => (
-                                          <div key={i} className="p-6 bg-white/5 border border-white/5 space-y-3">
-                                            <h5 className="text-[11px] font-black uppercase tracking-widest text-primary">{area.categoryName}</h5>
-                                            <p className="text-[10px] text-muted-foreground leading-relaxed uppercase">{area.description}</p>
-                                            <ul className="space-y-1 pt-2 border-t border-white/5">
-                                              {area.specificItems.map((item: string, j: number) => (
-                                                <li key={j} className="text-[9px] font-bold text-foreground/60 flex items-center gap-2">
-                                                  <ChevronRight className="w-3 h-3 text-primary shrink-0" /> {item}
-                                                </li>
-                                              ))}
-                                            </ul>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              </InstitutionalDecryptor>
-                            </DialogContent>
-                          </Dialog>
+                        {/* Status (Inline Quick Toggle) */}
+                        <TableCell className="text-center whitespace-nowrap">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:bg-white/5">
-                                <MoreVertical className="w-4 h-4" />
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-7 px-3 rounded-full bg-card border border-white/10 hover:border-primary/40 text-[10px] font-mono uppercase tracking-wider text-white"
+                              >
+                                <span className={cn(
+                                  "w-1.5 h-1.5 rounded-full mr-2",
+                                  c.status === 'Resolved' ? 'bg-emerald-400' :
+                                  c.status === 'Investigating' ? 'bg-amber-400' : 'bg-primary'
+                                )} />
+                                {c.status || 'Review Pending'}
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-card border-white/10 shadow-2xl w-48">
-                              <DropdownMenuItem className="py-2.5 text-xs font-bold uppercase tracking-widest hover:bg-primary/10 hover:text-primary">
-                                <Activity className="w-3.5 h-3.5 mr-2" /> Mark Investigating
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="py-2.5 text-xs font-bold uppercase tracking-widest hover:bg-emerald-500/10 hover:text-emerald-500">
-                                <CheckCircle2 className="w-3.5 h-3.5 mr-2" /> Mark Resolved
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => deleteCase(c.id)}
-                                className="py-2.5 text-xs font-bold uppercase tracking-widest hover:bg-destructive/10 hover:text-destructive"
-                              >
-                                <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete Record
-                              </DropdownMenuItem>
+                            <DropdownMenuContent align="center" className="bg-[#12161E] border-white/15 w-48 shadow-2xl">
+                              <DropdownMenuLabel className="text-[9px] uppercase font-mono tracking-widest text-muted-foreground">
+                                Update Status
+                              </DropdownMenuLabel>
+                              <DropdownMenuSeparator className="bg-white/10" />
+                              {STATUS_OPTIONS.map(status => (
+                                <DropdownMenuItem 
+                                  key={status}
+                                  onClick={() => updateCaseStatus(c.id, status)}
+                                  className={cn(
+                                    "text-xs font-medium py-2 cursor-pointer flex items-center justify-between",
+                                    c.status === status && "text-primary font-bold"
+                                  )}
+                                >
+                                  {status}
+                                  {c.status === status && <Check className="w-3.5 h-3.5 text-primary" />}
+                                </DropdownMenuItem>
+                              ))}
                             </DropdownMenuContent>
                           </DropdownMenu>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                        </TableCell>
+
+                        {/* Actions */}
+                        <TableCell className="text-right px-6 whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-2">
+                            
+                            {/* View Full Dossier Dialog */}
+                            <Dialog open={selectedCase?.id === c.id} onOpenChange={(open) => setSelectedCase(open ? c : null)}>
+                              <DialogTrigger asChild>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => setSelectedCase(c)}
+                                  className="h-8 px-3 border-white/10 bg-white/5 hover:bg-primary hover:text-black font-bold uppercase text-[10px] tracking-wider rounded-lg transition-all"
+                                >
+                                  <Eye className="w-3.5 h-3.5 mr-1.5" />
+                                  Review Brief
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto glass-card border-white/15 p-0 rounded-2xl shadow-2xl">
+                                <DialogTitle className="sr-only">Forensic Dossier #{c.case_id}</DialogTitle>
+                                <DialogDescription className="sr-only">Detailed case brief for participant {c.user_name}</DialogDescription>
+                                
+                                <InstitutionalDecryptor caseId={c.case_id} label="Delaware Certified Brief">
+                                  
+                                  {/* Dossier Header */}
+                                  <div className="p-6 md:p-8 border-b border-white/10 bg-[#121720]/90 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                    <div className="flex items-center gap-4">
+                                      <div className="p-3.5 rounded-xl bg-primary/10 border border-primary/20 text-primary">
+                                        <Fingerprint className="w-6 h-6" />
+                                      </div>
+                                      <div>
+                                        <div className="flex items-center gap-2.5">
+                                          <h2 className="text-xl md:text-2xl font-headline font-bold uppercase tracking-tight text-white">
+                                            Investigation Brief
+                                          </h2>
+                                          <Badge className="bg-primary/20 text-primary border-primary/30 text-[10px] font-mono uppercase">
+                                            #{c.case_id}
+                                          </Badge>
+                                        </div>
+                                        <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest mt-0.5">
+                                          Intake Recorded: {new Date(c.created_at).toLocaleString()}
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    {/* Status dropdown inside modal */}
+                                    <div className="flex items-center gap-3">
+                                      <Select value={c.status} onValueChange={(val) => updateCaseStatus(c.id, val)}>
+                                        <SelectTrigger className="h-9 w-44 bg-card border-white/15 text-xs font-mono uppercase rounded-lg">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-card border-white/15">
+                                          {STATUS_OPTIONS.map(opt => (
+                                            <SelectItem key={opt} value={opt} className="text-xs font-mono uppercase">
+                                              {opt}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  </div>
+
+                                  {/* Dossier Body */}
+                                  <div className="p-6 md:p-8 space-y-8">
+                                    
+                                    {/* 3 Overview Cards */}
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                      
+                                      {/* Participant Profile */}
+                                      <div className="p-5 rounded-xl bg-card/60 border border-white/10 space-y-3">
+                                        <h4 className="text-[10px] font-mono uppercase tracking-widest text-primary flex items-center gap-1.5 font-bold">
+                                          <User className="w-3.5 h-3.5" /> Participant Profile
+                                        </h4>
+                                        <div className="space-y-2 text-xs">
+                                          <div>
+                                            <span className="text-[10px] text-muted-foreground uppercase font-mono">Full Name</span>
+                                            <p className="font-bold text-white text-sm">{c.user_name || 'N/A'}</p>
+                                          </div>
+                                          <div>
+                                            <span className="text-[10px] text-muted-foreground uppercase font-mono">Email Contact</span>
+                                            <p className="font-medium text-white/90">
+                                              <a href={`mailto:${c.user_email}`} className="hover:text-primary transition-colors">
+                                                {c.user_email || 'N/A'}
+                                              </a>
+                                            </p>
+                                          </div>
+                                          <div>
+                                            <span className="text-[10px] text-muted-foreground uppercase font-mono">Phone</span>
+                                            <p className="font-medium text-white/90">
+                                              <a href={`tel:${c.user_phone}`} className="hover:text-primary transition-colors">
+                                                {c.user_phone || 'N/A'}
+                                              </a>
+                                            </p>
+                                          </div>
+                                          <div>
+                                            <span className="text-[10px] text-muted-foreground uppercase font-mono">Jurisdiction / Country</span>
+                                            <p className="font-bold text-white">{c.user_country || 'Undisclosed'}</p>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* Intake Triage Metrics */}
+                                      <div className="p-5 rounded-xl bg-card/60 border border-white/10 space-y-3">
+                                        <h4 className="text-[10px] font-mono uppercase tracking-widest text-primary flex items-center gap-1.5 font-bold">
+                                          <Activity className="w-3.5 h-3.5" /> Triage Metrics
+                                        </h4>
+                                        <div className="space-y-2 text-xs">
+                                          <div>
+                                            <span className="text-[10px] text-muted-foreground uppercase font-mono">Assigned Risk Level</span>
+                                            <p className={cn(
+                                              "font-bold uppercase font-mono text-sm",
+                                              c.risk_level === 'Critical' ? 'text-destructive' : 'text-primary'
+                                            )}>{c.risk_level || 'Initial'}</p>
+                                          </div>
+                                          <div>
+                                            <span className="text-[10px] text-muted-foreground uppercase font-mono">Evidence Integrity</span>
+                                            <p className="font-bold text-white uppercase">{c.evidence_integrity || 'Pending Review'}</p>
+                                          </div>
+                                          <div>
+                                            <span className="text-[10px] text-muted-foreground uppercase font-mono">Preferred Comms</span>
+                                            <p className="font-medium text-white/90">
+                                              {c.preferred_method || 'Email'} {c.best_contact_time ? `(${c.best_contact_time})` : ''}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* Platform & Incident Details */}
+                                      <div className="p-5 rounded-xl bg-card/60 border border-white/10 space-y-3">
+                                        <h4 className="text-[10px] font-mono uppercase tracking-widest text-primary flex items-center gap-1.5 font-bold">
+                                          <Target className="w-3.5 h-3.5" /> Incident Details
+                                        </h4>
+                                        <div className="space-y-2 text-xs">
+                                          <div>
+                                            <span className="text-[10px] text-muted-foreground uppercase font-mono">Scam Classification</span>
+                                            <p className="font-bold text-white">{c.case_type || 'Unspecified'}</p>
+                                          </div>
+                                          {c.form_values && Object.entries(c.form_values).map(([k, v]: any) => (
+                                            <div key={k}>
+                                              <span className="text-[10px] text-muted-foreground uppercase font-mono">
+                                                {k.replace(/([A-Z])/g, ' $1')}
+                                              </span>
+                                              <p className="font-mono text-white/90 truncate">{String(v)}</p>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+
+                                    </div>
+
+                                    {/* Narrative & Evidence Files */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                      
+                                      {/* Victim Narrative */}
+                                      <div className="space-y-2.5">
+                                        <h4 className="text-xs font-mono uppercase font-bold text-muted-foreground flex items-center gap-2">
+                                          <Search className="w-3.5 h-3.5 text-primary" /> Case Narrative & Statement
+                                        </h4>
+                                        <div className="p-5 rounded-xl bg-black/40 border border-white/10 text-xs sm:text-sm text-white/90 leading-relaxed italic border-l-4 border-l-primary relative">
+                                          "{c.description || 'No detailed statement submitted during intake.'}"
+                                        </div>
+                                      </div>
+
+                                      {/* Attached Evidence Files */}
+                                      <div className="space-y-2.5">
+                                        <h4 className="text-xs font-mono uppercase font-bold text-muted-foreground flex items-center gap-2">
+                                          <ShieldCheck className="w-3.5 h-3.5 text-primary" /> Attached Evidence Documents
+                                        </h4>
+                                        <div className="space-y-2">
+                                          {c.evidence_files && c.evidence_files.length > 0 ? (
+                                            c.evidence_files.map((file, idx) => (
+                                              <a
+                                                key={idx}
+                                                href={file.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex items-center justify-between p-3.5 rounded-xl bg-card border border-white/10 hover:border-primary/50 transition-colors group"
+                                              >
+                                                <div className="flex items-center gap-3 truncate">
+                                                  <FileText className="w-4 h-4 text-primary shrink-0" />
+                                                  <span className="text-xs font-mono font-medium text-white truncate">
+                                                    {file.name}
+                                                  </span>
+                                                </div>
+                                                <Download className="w-4 h-4 text-muted-foreground group-hover:text-primary shrink-0 ml-2" />
+                                              </a>
+                                            ))
+                                          ) : (
+                                            <div className="p-6 rounded-xl border border-dashed border-white/10 text-center">
+                                              <p className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
+                                                No direct files uploaded by client
+                                              </p>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                    </div>
+
+                                    {/* AI Forensic Insights if Present */}
+                                    {c.result_data?.preliminaryCaseFindings && (
+                                      <div className="space-y-3 pt-4 border-t border-white/10">
+                                        <h4 className="text-xs font-mono uppercase font-bold text-primary flex items-center gap-2">
+                                          <Sparkles className="w-4 h-4" /> Automated Case Diagnostic Findings
+                                        </h4>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                          {Object.entries(c.result_data.preliminaryCaseFindings).map(([key, val]: any) => (
+                                            <div key={key} className="p-3.5 rounded-xl bg-card border border-white/10">
+                                              <p className="text-[10px] text-muted-foreground uppercase font-mono mb-1">{key.replace(/([A-Z])/g, ' $1')}</p>
+                                              <p className="text-xs font-bold uppercase text-white">{String(val)}</p>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                  </div>
+                                </InstitutionalDecryptor>
+                              </DialogContent>
+                            </Dialog>
+
+                            {/* Row Action Dropdown */}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:bg-white/5 rounded-lg">
+                                  <MoreVertical className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="bg-[#12161E] border-white/15 w-48 shadow-2xl">
+                                <DropdownMenuItem 
+                                  onClick={() => updateCaseStatus(c.id, 'Investigating')}
+                                  className="text-xs font-medium py-2 cursor-pointer hover:bg-primary/10 hover:text-primary"
+                                >
+                                  <Activity className="w-3.5 h-3.5 mr-2 text-primary" /> Mark Investigating
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => updateCaseStatus(c.id, 'Resolved')}
+                                  className="text-xs font-medium py-2 cursor-pointer hover:bg-emerald-500/10 hover:text-emerald-400"
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5 mr-2 text-emerald-400" /> Mark Resolved
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator className="bg-white/10" />
+                                <DropdownMenuItem 
+                                  onClick={() => deleteCase(c.id)}
+                                  className="text-xs font-medium py-2 cursor-pointer text-destructive hover:bg-destructive/10"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete Record
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
           </div>
-        </Card>
-      </div>
 
-      <div className="fixed inset-0 pointer-events-none -z-10">
-        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-primary/[0.02] rounded-full blur-[160px]" />
-        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-secondary/[0.01] rounded-full blur-[120px]" />
+          {/* Table Footer Stats Bar */}
+          <div className="p-4 bg-[#12161E] border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-muted-foreground font-mono">
+            <div>
+              Showing <span className="font-bold text-white">{filteredCases.length}</span> of <span className="font-bold text-white">{cases.length}</span> forensic files
+            </div>
+            <div className="flex items-center gap-4">
+              <span>Delaware Division of Corporations Node</span>
+              <span>•</span>
+              <span>Encrypted Session</span>
+            </div>
+          </div>
+        </Card>
+
       </div>
     </main>
   );
